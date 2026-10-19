@@ -8,7 +8,8 @@ enum class BenchmarkCategory {
     STORAGE,
     PRODUCTIVITY,
     EXTERNAL_GPU,
-    FULL          // Runs all supported categories sequentially and produces a combined score
+    FULL,         // Runs all supported categories sequentially and produces a combined score
+    STRESS        // Loops benchmarks continuously until stopped by user
 }
 
 /** Human-readable display label shown in the HomeScreen benchmark-type dropdown. */
@@ -21,4 +22,5 @@ fun BenchmarkCategory.displayLabel(): String = when (this) {
     BenchmarkCategory.PRODUCTIVITY -> "Productivity"
     BenchmarkCategory.EXTERNAL_GPU -> "GPU (External)"
     BenchmarkCategory.FULL         -> "Final Benchmark"
+    BenchmarkCategory.STRESS       -> "Stress Test (Infinite Loop)"
 }
