@@ -85,8 +85,7 @@ A comprehensive Android CPU, GPU, RAM, Storage, AI/ML, and Productivity benchmar
 - **Comprehensive Multi-Component Benchmarking**: Tests and evaluates CPU, AI/ML, GPU, RAM, Storage, and Productivity performance in a single platform.
 - **Advanced Benchmark Modes**:
   - **Full Benchmark**: Runs all 46 tests sequentially to generate overall and category-specific scores.
-  - **Throttle Test (Stress Test)**: Sustained heavy CPU + GPU workload (10/30/60 mins) tracking clock speeds, thermal throttling, and performance retention over time.
-  - **Efficiency Test**: Measures performance output relative to power consumption (points/watt) and battery drain.
+  - **Throttle Test & Efficiency Test Specifications**: Comprehensive technical documentation provided in [/docs/modes](docs/modes/full.md) for sustained stress testing and power-efficiency evaluation.
 - **Robust Scoring System**: Normalized scores relative to a reference baseline (Snapdragon 8 Gen 3) using geometric means to ensure fair evaluation.
 - **Results History**: Local SQLite storage for historical runs with detailed, interactive performance graphs.
 - **Global Rankings**: Compare your device against other benchmarked Android devices with offline/online sync.
@@ -109,7 +108,7 @@ A comprehensive Android CPU, GPU, RAM, Storage, AI/ML, and Productivity benchmar
 - **JSON Parsing**: Tests text processing, string manipulation, and object tree instantiation.
 - **N-Queens**: Tests recursion, backtracking, and CPU branch prediction.
 
-### 🧠 AI/ML Tests (5 tests)
+### 🧠 AI/ML Tests (5 compute kernels)
 - **Matrix Multiplication**: Evaluates dense matrix computation performance.
 - **Convolution 2D**: Benchmarks 2D convolutional neural network operation throughput.
 - **Activation Functions**: Evaluates non-linear neural activations (ReLU, GELU, Sigmoid).
@@ -123,8 +122,8 @@ A comprehensive Android CPU, GPU, RAM, Storage, AI/ML, and Productivity benchmar
   - **Particle System**: Simulation of 100K+ interactive physical particles.
   - **Texture Sampling**: High-resolution texture cache sampling and fillrate test.
   - **Tessellation**: Geometry subdivision and dynamic LOD rendering.
-- **External GPU Tests (Unity / Unreal)**:
-  - Separate deep-linked high-fidelity rendering benchmark APKs (2 Unity scenes, 3 Unreal scenes) that communicate real-time FPS and frame times back to the main app.
+- **External GPU Tests (Unity / Unreal Specification)**:
+  - Technical architecture for external deep-linked high-fidelity rendering benchmark APKs (2 Unity scenes, 3 Unreal scenes).
 
 ### 💾 RAM Tests (5 tests)
 - **Sequential Read/Write**: Measures block transfer speeds in system memory.
