@@ -238,7 +238,9 @@ fun BenchmarkScreen(
                                 letterSpacing = 2.sp
                             )
                             
-                            val configTitle = when (preset.lowercase()) {
+                            val configTitle = if (uiState.isStressMode) {
+                                "Stress Mode (Loop #${uiState.stressLoopCount})"
+                            } else when (preset.lowercase()) {
                                 "slow" -> "Low Accuracy - Fastest (${benchmarkCategory.name})"
                                 "mid" -> "Mid Accuracy - Fast (${benchmarkCategory.name})"
                                 "flagship" -> "High Accuracy - Slow (${benchmarkCategory.name})"
@@ -336,6 +338,37 @@ fun BenchmarkScreen(
                             timeText = uiState.estimatedTimeRemaining,
                             elapsedTime = uiState.elapsedTime
                         )
+                        if (uiState.isStressMode) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Surface(
+                                onClick = {
+                                    viewModel.finishStressTest()
+                                    onBenchmarkEnd()
+                                },
+                                color = MaterialTheme.colorScheme.errorContainer,
+                                shape = RoundedCornerShape(20.dp),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Stop",
+                                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "STOP STRESS TEST",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                }
+                            }
+                        }
                         Spacer(modifier = Modifier.height(24.dp))
                     }
                     

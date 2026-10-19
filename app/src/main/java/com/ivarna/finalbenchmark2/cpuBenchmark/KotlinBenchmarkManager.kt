@@ -178,12 +178,15 @@ class KotlinBenchmarkManager(
                         "SINGLE_SOURCE_OF_TRUTH: Starting benchmark execution with device tier: $deviceTier, Category: $category"
                 )
 
-                if (category == BenchmarkCategory.AI) {
+                if (category == BenchmarkCategory.STRESS) {
+                    Log.d(TAG, "Running Stress Test (CPU Loop)")
+                    runCpuBenchmarks(deviceTier, category)
+                } else if (category == BenchmarkCategory.AI) {
                     Log.d(TAG, "Running AI Benchmarks")
                     runAiBenchmarks(deviceTier)
                 } else {
                     Log.d(TAG, "Running CPU Benchmarks")
-                    runCpuBenchmarks(deviceTier)
+                    runCpuBenchmarks(deviceTier, category)
                 }
         }
 
@@ -303,7 +306,7 @@ class KotlinBenchmarkManager(
              _benchmarkComplete.emit(summaryJson)
         }
 
-        private suspend fun runCpuBenchmarks(deviceTier: String) {
+        private suspend fun runCpuBenchmarks(deviceTier: String, category: BenchmarkCategory = BenchmarkCategory.CPU) {
                 // Run test workload first (warm-up)
                 runTestWorkload()
 
@@ -599,7 +602,7 @@ class KotlinBenchmarkManager(
                 )
 
                 // Calculate and emit final results
-                val summaryJson = calculateSummary(singleResults, multiResults)
+                val summaryJson = calculateSummary(singleResults, multiResults, category)
                 Log.d(TAG, "SINGLE_SOURCE_OF_TRUTH: Generated summary JSON: $summaryJson")
                 Log.d(
                         TAG,
@@ -687,7 +690,8 @@ class KotlinBenchmarkManager(
 
         private fun calculateSummary(
                 singleResults: List<BenchmarkResult>,
-                multiResults: List<BenchmarkResult>
+                multiResults: List<BenchmarkResult>,
+                category: BenchmarkCategory = BenchmarkCategory.CPU
         ): String {
                 // Calculate single-core score using geometric mean
                 val calculatedSingleCoreScore = calculateGeometricMean(singleResults)
@@ -780,6 +784,7 @@ class KotlinBenchmarkManager(
 
                 return JSONObject()
                         .apply {
+                                put("type", category.name)
                                 put("single_core_score", sanitizeDouble(calculatedSingleCoreScore))
                                 put("multi_core_score", sanitizeDouble(calculatedMultiCoreScore))
                                 put("final_score", sanitizeDouble(calculatedFinalScore))

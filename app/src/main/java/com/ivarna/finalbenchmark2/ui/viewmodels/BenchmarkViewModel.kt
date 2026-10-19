@@ -61,7 +61,9 @@ data class BenchmarkUiState(
         val workloadPreset: String =
                 "Auto", // ADDED: Track the current workload preset for UI display
         val estimatedTimeRemaining: String = "--:--",
-        val elapsedTime: String = "00:00" // ADDED: Elapsed time
+        val elapsedTime: String = "00:00", // ADDED: Elapsed time
+        val stressLoopCount: Int = 0, // Track stress mode loop iteration
+        val isStressMode: Boolean = false
 )
 
 // Old data class kept for compatibility
@@ -311,393 +313,193 @@ class BenchmarkViewModel(
                                 // Do NOT turn off warm-up here. Wait for first test to start.
 
                                 // 1. RESET STATE - Initialize test states
-                                // category is already passed in
-                                
-                                val names = com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkName.getByCategory(category)
-                                val testNames = if (category == com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkCategory.CPU) {
-                                     // Group all Single-Core first, then all Multi-Core
+                                val names = com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkName.getByCategory(
+                                    if (category == com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkCategory.STRESS) com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkCategory.CPU else category
+                                )
+                                val testNames = if (category == com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkCategory.CPU || category == com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkCategory.STRESS) {
                                      names.map { it.singleCore() } + names.map { it.multiCore() }
                                 } else {
                                      names.map { it.displayName() }
                                 }
 
-                                _uiState.update {
-                                        it.copy(
-                                                isRunning = true,
-                                                progress = 0f,
-                                                currentTestName = "Initializing...",
-                                                testStates =
-                                                        testNames.map { name ->
-                                                                TestState(
-                                                                        name = name,
-                                                                        status = TestStatus.PENDING
-                                                                )
-                                                        },
-                                                error = null,
-                                                workloadPreset =
-                                                        preset // FIXED: Store the actual preset
-                                                // parameter
-                                                )
-                                }
+                                var stressLoopCount = 1
+                                var lastSummaryJson = ""
+                                var lastResults: BenchmarkResults? = null
+                                val isStress = (category == com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkCategory.STRESS)
 
-                                // 2. RUN BENCHMARKS: Start listening for completion BEFORE running
-                                // benchmarks
-                                val summaryDeferred =
-                                        async(Dispatchers.IO) {
-                                                benchmarkManager.benchmarkComplete.first()
-                                        }
+                                do {
+                                    _uiState.update {
+                                            it.copy(
+                                                    isRunning = true,
+                                                    progress = 0f,
+                                                    currentTestName = if (isStress) "Stress Loop #$stressLoopCount starting..." else "Initializing...",
+                                                    testStates =
+                                                            testNames.map { name ->
+                                                                    TestState(
+                                                                            name = name,
+                                                                            status = TestStatus.PENDING
+                                                                    )
+                                                            },
+                                                    error = null,
+                                                    workloadPreset = preset,
+                                                    isStressMode = isStress,
+                                                    stressLoopCount = stressLoopCount
+                                            )
+                                    }
 
-                                val eventJob = launch {
-                                        // Listen to benchmark events for UI updates
+                                    val summaryDeferred = async(Dispatchers.IO) {
+                                        benchmarkManager.benchmarkComplete.first()
+                                    }
+                                    summaryDeferredJob = summaryDeferred
+
+                                    val eventJob = launch {
                                         try {
-                                                benchmarkManager.benchmarkEvents.collect { event ->
-                                                        // Handle TEST mode separately (warm-up workload)
-                                                        if (event.mode == "TEST") {
-                                                                when (event.state) {
-                                                                        "STARTED" -> {
-                                                                                _uiState.update { state ->
-                                                                                        state.copy(
-                                                                                                currentTestName = "Warming up device..."
-                                                                                        )
-                                                                                }
-                                                                        }
-                                                                        "COMPLETED" -> {
-                                                                                _uiState.update { state ->
-                                                                                        state.copy(
-                                                                                                currentTestName = "Warm-up complete, starting benchmarks..."
-                                                                                        )
-                                                                                }
-                                                                        }
-                                                                }
-                                                                return@collect // Skip normal processing for TEST events
-                                                        }
-
-                                                        // Normal benchmark event handling (SINGLE and MULTI modes)
-                                                        when (event.state) {
-                                                                "STARTED" -> {
-                                                                        if (_isWarmingUp.value) {
-                                                                            _isWarmingUp.value = false
-                                                                        }
-                                                                        
-                                                                        // RECALCULATE TIMER if needed
-                                                                        val remainingTests = _uiState.value.testStates.count { it.status == TestStatus.PENDING }
-                                                                        // Simple heuristic: If 00:00 (or close), add time based on remaining count
-                                                                        if (currentCountdownSeconds < 5 && remainingTests > 0) {
-                                                                             val timePerTest = when (preset.lowercase()) {
-                                                                                 "flagship" -> 10 // 10s per test (20 tests = 200s total was estimate)
-                                                                                 "mid" -> 6
-                                                                                 "slow" -> 3
-                                                                                 else -> 6
-                                                                             }
-                                                                             currentCountdownSeconds += (remainingTests * timePerTest)
-                                                                             Log.d("BenchmarkViewModel", "Timer extended by ${remainingTests * timePerTest}s")
-                                                                        }
-
-                                                                        _uiState.update { state ->
-                                                                                state.copy(
-                                                                                        currentTestName =
-                                                                                                event.testName,
-                                                                                        testStates =
-                                                                                                state.testStates
-                                                                                                        .map {
-                                                                                                                if (it.name ==
-                                                                                                                                event.testName
-                                                                                                                )
-                                                                                                                        it.copy(
-                                                                                                                                status =
-                                                                                                                                        TestStatus
-                                                                                                                                                .RUNNING,
-                                                                                                                                accelerationMode = event.accelerationMode // Capture mode early
-                                                                                                                        )
-                                                                                                                else
-                                                                                                                        it
-                                                                                                        }
-                                                                                )
-                                                                        }
-                                                                }
-                                                                "COMPLETED" -> {
-                                                                        val currentProgress =
-                                                                                _uiState.value
-                                                                                        .progress +
-                                                                                        (1f /
-                                                                                                testNames
-                                                                                                        .size
-                                                                                                        .toFloat())
-                                                                        _uiState.update { state ->
-                                                                                val updatedTestStates =
-                                                                                        state.testStates
-                                                                                                .map {
-                                                                                                        if (it.name ==
-                                                                                                                        event.testName
-                                                                                                        )
-                                                                                                                it.copy(
-                                                                                                                        status =
-                                                                                                                                TestStatus
-                                                                                                                                        .COMPLETED,
-                                                                                                                        timeText =
-                                                                                                                                String.format(
-                                                                                                                                        Locale.US,
-                                                                                                                                        "%.2f s",
-                                                                                                                                        event.timeMs /
-                                                                                                                                                1000.0
-                                                                                                                                ),
-                                                                                                                        durationMs = event.timeMs, // Capture duration
-                                                                                                                        accelerationMode = event.accelerationMode // Capture mode
-                                                                                                                )
-                                                                                                        else
-                                                                                                                it
-                                                                                                }
-                                                                                val completedCount =
-                                                                                        updatedTestStates
-                                                                                                .count {
-                                                                                                        it.status ==
-                                                                                                                TestStatus
-                                                                                                                        .COMPLETED
-                                                                                                }
-
-                                                                                // Update legacy
-                                                                                // state for
-                                                                                // compatibility
-                                                                                _benchmarkState
-                                                                                        .value =
-                                                                                        BenchmarkState
-                                                                                                .Running(
-                                                                                                        BenchmarkProgress(
-                                                                                                                currentBenchmark =
-                                                                                                                        event.testName,
-                                                                                                                progress =
-                                                                                                                        ((completedCount
-                                                                                                                                        .toFloat() /
-                                                                                                                                        testNames
-                                                                                                                                                .size
-                                                                                                                                                .toFloat()) *
-                                                                                                                                        100)
-                                                                                                                                .toInt(),
-                                                                                                                completedBenchmarks =
-                                                                                                                        completedCount,
-                                                                                                                totalBenchmarks =
-                                                                                                                        testNames
-                                                                                                                                .size
-                                                                                                        )
-                                                                                                )
-
-                                                                                state.copy(
-                                                                                        progress =
-                                                                                                currentProgress,
-                                                                                        currentTestName =
-                                                                                                event.testName,
-                                                                                        testStates =
-                                                                                                updatedTestStates
-                                                                                )
-                                                                        }
-                                                                }
-                                                        }
+                                            benchmarkManager.benchmarkEvents.collect { event ->
+                                                if (event.mode == "TEST") {
+                                                    if (event.state == "STARTED") {
+                                                        _uiState.update { state -> state.copy(currentTestName = "Warming up device...") }
+                                                    } else if (event.state == "COMPLETED") {
+                                                        _uiState.update { state -> state.copy(currentTestName = "Warm-up complete, starting benchmarks...") }
+                                                    }
+                                                    return@collect
                                                 }
-                                        } catch (e: Exception) {
-                                                Log.e(
-                                                        "BenchmarkViewModel",
-                                                        "Error in event collection: ${e.message}",
-                                                        e
-                                                )
-                                        }
-                                }
-
-                                // Start the benchmark execution
-                                benchmarkJob =
-                                        launch(Dispatchers.IO) {
-                                                benchmarkManager.runBenchmarks(preset, category)
-                                        }
-
-                                // Wait for the completion result (the event from benchmark will be
-                                // caught by summaryDeferred)
-                                val summaryJson = summaryDeferred.await()
-                                Log.d(
-                                        "BenchmarkViewModel",
-                                        "Received summary JSON from manager: $summaryJson"
-                                )
-
-                                // Parse results from the collected summary
-                                val finalResults =
-                                        try {
-                                                parseResultsFromManagerJson(summaryJson)
-                                        } catch (e: Exception) {
-                                                Log.e(
-                                                        "BenchmarkViewModel",
-                                                        "Error parsing results from JSON: ${e.message}",
-                                                        e
-                                                )
-                                                throw e
-                                        } finally {
-                                                eventJob.cancel() // Cancel event collection
-                                                Log.d(
-                                                        "BenchmarkViewModel",
-                                                        "Event collection cancelled"
-                                                )
-                                        }
-
-                                // 3. UPDATE FINAL STATE
-                                _uiState.update {
-                                        it.copy(isRunning = false, benchmarkResults = finalResults)
-                                }
-
-                                _benchmarkState.value = BenchmarkState.Completed(finalResults)
-
-                                // Log completion to help debug navigation issues
-                                Log.d(
-                                        "BenchmarkViewModel",
-                                        "Benchmark completed! State set to Completed with results: ${finalResults.finalWeightedScore}"
-                                )
-
-                                // Stop performance monitoring and capture metrics BEFORE creating
-                                // summary JSON
-                                lastPerformanceMetricsJson = performanceMonitor.stop()
-                                Log.d(
-                                        "BenchmarkViewModel",
-                                        "Captured performance metrics: ${lastPerformanceMetricsJson.take(100)}..."
-                                )
-
-                                // DIRECT CALLBACK: Emit event regardless of callback presence
-                                // if (onBenchmarkCompleteCallback != null) { // REMOVED
-                                        try {
-                                                // Create summary JSON similar to what
-                                                // BenchmarkScreen expects
-                                                val gson = com.google.gson.Gson()
-                                                
-                                                fun sanitize(value: Double): Double =
-                                                        when {
-                                                                value.isInfinite() -> 0.0
-                                                                value.isNaN() -> 0.0
-                                                                else -> value
+                                                when (event.state) {
+                                                    "STARTED" -> {
+                                                        if (_isWarmingUp.value) {
+                                                            _isWarmingUp.value = false
+                                                        }
+                                                        val remainingTests = _uiState.value.testStates.count { it.status == TestStatus.PENDING }
+                                                        if (currentCountdownSeconds < 5 && remainingTests > 0) {
+                                                             val timePerTest = when (preset.lowercase()) {
+                                                                 "flagship" -> 10
+                                                                 "mid" -> 6
+                                                                 "slow" -> 3
+                                                                 else -> 6
+                                                             }
+                                                             currentCountdownSeconds += (remainingTests * timePerTest)
                                                         }
 
-                                                // Parse performance metrics JSON into a Map for clean
-                                                // Gson serialization
-                                                val performanceMetricsMap: Map<String, Any> =
-                                                        try {
-                                                                if (lastPerformanceMetricsJson
-                                                                                .isNotBlank() &&
-                                                                                lastPerformanceMetricsJson !=
-                                                                                        "{}"
-                                                                ) {
-                                                                        val type =
-                                                                                object :
-                                                                                        com.google.gson
-                                                                                        .reflect
-                                                                                        .TypeToken<
-                                                                                                Map<
-                                                                                                        String,
-                                                                                                        Any
-                                                                                                >
-                                                                                        >() {}
-                                                                                        .type
-                                                                        gson.fromJson(
-                                                                                lastPerformanceMetricsJson,
-                                                                                type
-                                                                        )
-                                                                } else {
-                                                                        emptyMap()
+                                                        _uiState.update { state ->
+                                                            state.copy(
+                                                                currentTestName = event.testName,
+                                                                testStates = state.testStates.map {
+                                                                    if (it.name == event.testName) it.copy(status = TestStatus.RUNNING, accelerationMode = event.accelerationMode) else it
                                                                 }
-                                                        } catch (e: Exception) {
-                                                                Log.e(
-                                                                        "BenchmarkViewModel",
-                                                                        "Error parsing performance metrics JSON",
-                                                                        e
-                                                                )
-                                                                emptyMap()
+                                                            )
                                                         }
-
-                                                val summaryData =
-                                                        mapOf(
-                                                                "type" to category.name,
-                                                                "single_core_score" to
-                                                                        sanitize(
-                                                                                finalResults
-                                                                                        .singleCoreScore
-                                                                        ),
-                                                                "multi_core_score" to
-                                                                        sanitize(
-                                                                                finalResults
-                                                                                        .multiCoreScore
-                                                                        ),
-                                                                "final_score" to
-                                                                        sanitize(
-                                                                                finalResults
-                                                                                        .finalWeightedScore
-                                                                        ),
-                                                                "normalized_score" to
-                                                                        sanitize(
-                                                                                finalResults
-                                                                                        .normalizedScore
-                                                                        ),
-                                                                "rating" to
-                                                                        "Good", // Simple rating for
-                                                                // now
-                                                                "timestamp" to
-                                                                        System.currentTimeMillis(), // Capture completion time
-                                                                "performance_metrics" to
-                                                                        performanceMetricsMap, // FIXED: Use Map for correct JSON structure
-                                                                "detailed_results" to
-                                                                        finalResults.detailedResults
-                                                                                .map { result ->
-                                                                                        mapOf(
-                                                                                                "name" to
-                                                                                                        result.name,
-                                                                                                "executionTimeMs" to
-                                                                                                        sanitize(
-                                                                                                                result.executionTimeMs
-                                                                                                        ),
-                                                                                                "opsPerSecond" to
-                                                                                                        sanitize(
-                                                                                                                result.opsPerSecond
-                                                                                                        ),
-                                                                                                "isValid" to
-                                                                                                        result.isValid,
-                                                                                                "metricsJson" to
-                                                                                                        result.metricsJson
-                                                                                        )
-                                                                                }
-                                                        )
-
-                                                val summaryJson = gson.toJson(summaryData)
-
-                                                Log.d(
-                                                        "BenchmarkViewModel",
-                                                        "Timestamp in summaryData: ${summaryData["timestamp"]}"
-                                                )
-                                                Log.d(
-                                                        "BenchmarkViewModel",
-                                                        "Emitting completion event with JSON: ${summaryJson.take(300)}..."
-                                                )
-                                                
-                                                // Emit event for UI to handle navigation
-                                                // Using SharedFlow ensures the UI (even if recreated) can receive it if it's listening
-                                                _completionEvent.emit(summaryJson)
-                                                
-                                                Log.d(
-                                                        "BenchmarkViewModel",
-                                                        "Completion event emitted successfully"
-                                                )
+                                                    }
+                                                    "COMPLETED" -> {
+                                                        val currentProgress = _uiState.value.progress + (1f / testNames.size.toFloat())
+                                                        _uiState.update { state ->
+                                                            val updatedTestStates = state.testStates.map {
+                                                                if (it.name == event.testName) it.copy(
+                                                                    status = TestStatus.COMPLETED,
+                                                                    timeText = String.format(Locale.US, "%.2f s", event.timeMs / 1000.0),
+                                                                    durationMs = event.timeMs,
+                                                                    accelerationMode = event.accelerationMode
+                                                                ) else it
+                                                            }
+                                                            state.copy(
+                                                                progress = currentProgress,
+                                                                currentTestName = event.testName,
+                                                                testStates = updatedTestStates
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            }
                                         } catch (e: Exception) {
-                                                Log.e(
-                                                        "BenchmarkViewModel",
-                                                        "Error emitting completion event: ${e.message}",
-                                                        e
-                                                )
+                                            Log.e("BenchmarkViewModel", "Error in event collection: ${e.message}", e)
                                         }
+                                    }
 
-                                // Save to database with performance metrics
-                                if (historyRepository != null) {
-                                    if (category == com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkCategory.CPU) {
-                                        saveCpuBenchmarkResult(
-                                            finalResults,
-                                            lastPerformanceMetricsJson
-                                        )
+                                    benchmarkJob = launch(Dispatchers.IO) {
+                                        benchmarkManager.runBenchmarks(preset, category)
+                                    }
+
+                                    val summaryJson = try {
+                                        summaryDeferred.await()
+                                    } catch (e: Exception) {
+                                        eventJob.cancel()
+                                        summaryDeferred.cancel()
+                                        if (!isBenchmarkRunning) break
+                                        throw e
+                                    } finally {
+                                        eventJob.cancel()
+                                        summaryDeferred.cancel()
+                                    }
+
+                                    lastSummaryJson = summaryJson
+                                    lastResults = try { parseResultsFromManagerJson(summaryJson) } catch (e: Exception) { null }
+
+                                    if (isStress && isBenchmarkRunning) {
+                                        stressLoopCount++
+                                        delay(500)
                                     } else {
-                                        saveGenericBenchmarkResult(
-                                           finalResults,
-                                           category.name,
-                                           lastPerformanceMetricsJson
-                                        )
+                                        break
+                                    }
+                                } while (isStress && isBenchmarkRunning)
+
+                                if (lastSummaryJson.isNotEmpty() && lastResults != null) {
+                                    val finalResults = lastResults!!
+                                    _uiState.update {
+                                            it.copy(isRunning = false, benchmarkResults = finalResults)
+                                    }
+
+                                    _benchmarkState.value = BenchmarkState.Completed(finalResults)
+
+                                    lastPerformanceMetricsJson = performanceMonitor.stop()
+
+                                    val gson = com.google.gson.Gson()
+                                    fun sanitize(value: Double): Double =
+                                            when {
+                                                    value.isInfinite() -> 0.0
+                                                    value.isNaN() -> 0.0
+                                                    else -> value
+                                            }
+
+                                    val performanceMetricsMap: Map<String, Any> =
+                                            try {
+                                                    if (lastPerformanceMetricsJson.isNotBlank() && lastPerformanceMetricsJson != "{}") {
+                                                            val type = object : com.google.gson.reflect.TypeToken<Map<String, Any>>() {}.type
+                                                            gson.fromJson(lastPerformanceMetricsJson, type)
+                                                    } else {
+                                                            emptyMap()
+                                                    }
+                                            } catch (e: Exception) {
+                                                    emptyMap()
+                                            }
+
+                                    val summaryData = mapOf(
+                                            "type" to category.name,
+                                            "single_core_score" to sanitize(finalResults.singleCoreScore),
+                                            "multi_core_score" to sanitize(finalResults.multiCoreScore),
+                                            "final_score" to sanitize(finalResults.finalWeightedScore),
+                                            "normalized_score" to sanitize(finalResults.normalizedScore),
+                                            "rating" to "Good",
+                                            "timestamp" to System.currentTimeMillis(),
+                                            "performance_metrics" to performanceMetricsMap,
+                                            "detailed_results" to finalResults.detailedResults.map { result ->
+                                                    mapOf(
+                                                            "name" to result.name,
+                                                            "executionTimeMs" to sanitize(result.executionTimeMs),
+                                                            "opsPerSecond" to sanitize(result.opsPerSecond),
+                                                            "isValid" to result.isValid,
+                                                            "metricsJson" to result.metricsJson
+                                                    )
+                                            }
+                                    )
+
+                                    val summaryJsonToEmit = gson.toJson(summaryData)
+
+                                    _completionEvent.emit(summaryJsonToEmit)
+
+                                    if (historyRepository != null) {
+                                        if (category == com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkCategory.CPU) {
+                                            saveCpuBenchmarkResult(finalResults, lastPerformanceMetricsJson)
+                                        } else {
+                                            saveGenericBenchmarkResult(finalResults, category.name, lastPerformanceMetricsJson)
+                                        }
                                     }
                                 }
 
@@ -886,7 +688,67 @@ class BenchmarkViewModel(
                 runBenchmarks(preset, category)
         }
 
+        private var summaryDeferredJob: Job? = null
+
+        fun finishStressTest() {
+                if (!isBenchmarkRunning) return
+                isBenchmarkRunning = false
+                summaryDeferredJob?.cancel()
+                benchmarkJob?.cancel()
+                BenchmarkForegroundService.stop(application)
+
+                lastPerformanceMetricsJson = performanceMonitor.stop()
+                val currentStates = _uiState.value.testStates
+                val loopCount = _uiState.value.stressLoopCount
+
+                _uiState.update { it.copy(isRunning = false) }
+                _benchmarkState.value = BenchmarkState.Idle
+
+                viewModelScope.launch(Dispatchers.IO) {
+                        val completedTests = currentStates.filter { it.status == TestStatus.COMPLETED }
+                        val detailedResultsArray = org.json.JSONArray().apply {
+                                completedTests.forEach { test ->
+                                        put(org.json.JSONObject().apply {
+                                                put("name", test.name)
+                                                put("opsPerSecond", if (test.durationMs > 0) 1000.0 / test.durationMs else 0.0)
+                                                put("executionTimeMs", test.durationMs.toDouble())
+                                                put("isValid", true)
+                                                put("acceleration_mode", test.accelerationMode ?: "CPU")
+                                        })
+                                }
+                        }
+
+                        val avgScore = if (completedTests.isNotEmpty()) {
+                                completedTests.map { if (it.durationMs > 0) 1000.0 / it.durationMs else 0.0 }.average()
+                        } else {
+                                100.0
+                        }
+
+                        val summaryJson = org.json.JSONObject().apply {
+                                put("type", "STRESS")
+                                put("single_core_score", avgScore)
+                                put("multi_core_score", avgScore)
+                                put("final_score", avgScore)
+                                put("normalized_score", avgScore)
+                                put("rating", "Stress Test Completed ($loopCount loops)")
+                                put("detailed_results", detailedResultsArray)
+                        }.toString()
+
+                        val parsedResults = parseResultsFromManagerJson(summaryJson)
+                        if (historyRepository != null) {
+                                saveGenericBenchmarkResult(parsedResults, "STRESS", lastPerformanceMetricsJson)
+                        }
+
+                        _completionEvent.emit(summaryJson)
+                }
+        }
+
         fun stopBenchmark() {
+                if (_uiState.value.isStressMode && isBenchmarkRunning) {
+                        finishStressTest()
+                        return
+                }
+                summaryDeferredJob?.cancel()
                 // Cancel the actual execution job
                 benchmarkJob?.cancel()
                 
