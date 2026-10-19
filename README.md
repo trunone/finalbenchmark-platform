@@ -15,7 +15,7 @@
 [![Stars](https://img.shields.io/github/stars/abhay-byte/finalbenchmark-platform?style=for-the-badge&logo=github&logoColor=white&labelColor=24292e&color=yellow)](https://github.com/abhay-byte/finalbenchmark-platform/stargazers)
 <br>
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=for-the-badge&logo=apache&logoColor=white)](LICENSE)
-[![Kotlin](https://img.shields.io/badge/Kotlin-100%25-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)](https://kotlinlang.org/)
+[![Kotlin](https://img.shields.io/badge/Kotlin-Compose-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)](https://kotlinlang.org/)
 [![Latest Release](https://img.shields.io/github/v/release/abhay-byte/finalbenchmark-platform?style=for-the-badge&logo=github&logoColor=white&labelColor=24292e&color=blue)](https://github.com/abhay-byte/finalbenchmark-platform/releases/latest)
 
 A comprehensive Android CPU, GPU, RAM, Storage, AI/ML, and Productivity benchmarking application with detailed scoring and visualization.
@@ -110,11 +110,11 @@ A comprehensive Android CPU, GPU, RAM, Storage, AI/ML, and Productivity benchmar
 - **N-Queens**: Tests recursion, backtracking, and CPU branch prediction.
 
 ### 🧠 AI/ML Tests (5 tests)
-- **LLM Inference**: On-device Large Language Model inference (llama.cpp with TinyLlama-1.1B/Gemma 3).
-- **Image Classification**: Object recognition in images using ONNX Runtime (MobileNetV3).
-- **Object Detection**: Identifies and bounds objects in real-time (EfficientDet Lite0).
-- **Text Embedding**: Natural language vector generation (MiniLM-L6).
-- **Speech-to-Text**: High-fidelity on-device audio transcription (Whisper-tiny).
+- **Matrix Multiplication**: Evaluates dense matrix computation performance.
+- **Convolution 2D**: Benchmarks 2D convolutional neural network operation throughput.
+- **Activation Functions**: Evaluates non-linear neural activations (ReLU, GELU, Sigmoid).
+- **Quantized GEMM**: Measures low-precision integer/quantized matrix multiplication.
+- **Attention Engine**: Benchmarks scaled dot-product self-attention calculations.
 
 ### 🎮 GPU Tests (10 tests)
 - **Native GPU Tests**:
@@ -157,8 +157,8 @@ For detailed technical specifications, design documents, and implementation plan
   - [RAM Benchmarks Details](docs/benchmark/ram.md)
   - [Storage Benchmarks Details](docs/benchmark/storage.md)
   - [Productivity Benchmarks Details](docs/benchmark/productivity.md)
-- [Database Schema & Architecture](docs/database/)
-- [Benchmark Modes & Configurations](docs/modes/)
+- [Database Schema & Architecture](docs/database/database_schema.md)
+- [Benchmark Modes & Configurations](docs/modes/full.md)
 
 ## 🔧 Building
 
