@@ -40,6 +40,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.rounded.BatteryStd
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Pending
@@ -755,8 +756,8 @@ fun HUDMonitor(
             )
 
             HUDMetric(
-                icon = Icons.Default.Bolt,
-                label = "TEMP",
+                icon = if (stats.isBatteryTemp) Icons.Rounded.BatteryStd else Icons.Default.Bolt,
+                label = if (stats.isBatteryTemp) "BAT TEMP" else "TEMP",
                 value = if (stats.temp > 0) "${stats.temp.toInt()}°C" else "--°C",
                 accentColor = if (stats.temp > 40) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.secondary
             )

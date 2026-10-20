@@ -5,5 +5,6 @@ data class SystemStats(
     val cpuLoad: Float = 0f,
     val power: Float = 0f,
     val temp: Float = 0f,
+    val isBatteryTemp: Boolean = false,
     val memoryLoad: Float = 0f
 )

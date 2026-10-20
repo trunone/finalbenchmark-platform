@@ -12,6 +12,7 @@ import com.ivarna.finalbenchmark2.data.database.entities.GenericTestDetailEntity
 import com.ivarna.finalbenchmark2.data.repository.HistoryRepository
 import com.ivarna.finalbenchmark2.utils.PerformanceMonitor
 import com.ivarna.finalbenchmark2.utils.StorageNativeBridge
+import com.ivarna.finalbenchmark2.utils.TemperatureUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -63,6 +64,7 @@ data class StorageBenchmarkUiState(
     val currentUnit: String = "MB/s",
     val storageFreeGB: Double = 0.0,
     val cpuTempC: Float = 0f,
+    val isBatteryTemp: Boolean = false,
     val completedTests: List<StorageTestResult> = emptyList(),
     val totalScore: Int = 0,
     val presetName: String = "",
@@ -161,7 +163,17 @@ class StorageBenchmarkViewModel(
     private var runJob: Job? = null
     private val performanceMonitor = PerformanceMonitor(application)
     private val cacheDir: File = application.cacheDir
+    private val tempUtils = TemperatureUtils(application)
     private val baseCpuTemp = (38..45).random().toFloat()
+
+    private fun getTemp(): Pair<Float, Boolean> {
+        val res = tempUtils.getCpuOrBatteryTemperature()
+        return if (res.temperature > 0f) {
+            Pair(res.temperature, res.isBattery)
+        } else {
+            Pair(mockCpuTemp(), false)
+        }
+    }
 
     fun start(preset: String) {
         runJob?.cancel()
@@ -204,10 +216,12 @@ class StorageBenchmarkViewModel(
                 val warmSteps = (WARMUP_DUR_MS / TICK_MS).toInt()
                 repeat(warmSteps) { step ->
                     delay(TICK_MS)
+                    val (temp, isBat) = getTemp()
                     _uiState.update { s ->
                         s.copy(
                             currentTestProgress = (step + 1).toFloat() / warmSteps * 0.15f,
-                            cpuTempC = mockCpuTemp(),
+                            cpuTempC = temp,
+                            isBatteryTemp = isBat,
                             storageFreeGB = cacheDirFreeGB()
                         )
                     }
@@ -226,11 +240,13 @@ class StorageBenchmarkViewModel(
                 repeat(measureSteps) { step ->
                     delay(TICK_MS)
                     val overall = (index + 0.15f + (step + 1).toFloat() / measureSteps * 0.85f) / STORAGE_TESTS.size
+                    val (temp, isBat) = getTemp()
                     _uiState.update { s ->
                         s.copy(
                             currentTestProgress = 0.15f + (step + 1).toFloat() / measureSteps * 0.85f,
                             overallProgress = overall,
-                            cpuTempC = mockCpuTemp(),
+                            cpuTempC = temp,
+                            isBatteryTemp = isBat,
                             storageFreeGB = cacheDirFreeGB()
                         )
                     }

@@ -7,9 +7,26 @@ import android.os.Build
 import android.os.HardwarePropertiesManager
 import java.io.File
 
-class TemperatureUtils(private val context: Context) {
+data class TemperatureResult(
+    val temperature: Float,
+    val isBattery: Boolean
+)
 
-    fun getCpuTemperature(): Float {
+open class TemperatureUtils(private val context: Context? = null) {
+
+    fun getCpuOrBatteryTemperature(): TemperatureResult {
+        val cpuTemp = getCpuTemperature()
+        if (cpuTemp > 0f) {
+            return TemperatureResult(cpuTemp, isBattery = false)
+        }
+        val batteryTemp = getBatteryTemperature()
+        if (batteryTemp > 0f) {
+            return TemperatureResult(batteryTemp, isBattery = true)
+        }
+        return TemperatureResult(-1f, isBattery = false)
+    }
+
+    open fun getCpuTemperature(): Float {
         // 1. Try reading from sysfs thermal zones
         val sysfsTemp = readCpuTempFromSysfs()
         if (sysfsTemp > 0f) {
@@ -25,10 +42,10 @@ class TemperatureUtils(private val context: Context) {
         return -1f
     }
 
-    fun getBatteryTemperature(): Float {
+    open fun getBatteryTemperature(): Float {
         // 1. Primary method: BatteryManager broadcast intent
         try {
-            val intent = context.registerReceiver(null, android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+            val intent = context?.registerReceiver(null, android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED))
             val temperature = intent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, -1) ?: -1
             if (temperature > 0) {
                 val celsius = temperature / 10f
@@ -131,7 +148,7 @@ class TemperatureUtils(private val context: Context) {
     private fun readCpuTempFromHardwareProperties(): Float {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             try {
-                val hpm = context.getSystemService(Context.HARDWARE_PROPERTIES_SERVICE) as? HardwarePropertiesManager
+                val hpm = context?.getSystemService(Context.HARDWARE_PROPERTIES_SERVICE) as? HardwarePropertiesManager
                 if (hpm != null) {
                     val temps = hpm.getDeviceTemperatures(
                         HardwarePropertiesManager.DEVICE_TEMPERATURE_CPU,

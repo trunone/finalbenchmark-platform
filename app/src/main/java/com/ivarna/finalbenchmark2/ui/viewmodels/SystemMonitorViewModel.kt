@@ -36,13 +36,14 @@ class SystemMonitorViewModel(application: Application) : AndroidViewModel(applic
                     // 1. Fetch Data
                     val cpuLoad = cpuUtilizationUtils.getCpuUtilizationPercentage()
                     val powerInfo = powerUtils.getPowerConsumptionInfo()
-                    val cpuTemp = temperatureUtils.getCpuTemperature()
+                    val tempResult = temperatureUtils.getCpuOrBatteryTemperature()
                     
                     // 2. Update State
                     _systemStats.value = SystemStats(
                         cpuLoad = cpuLoad,
                         power = powerInfo.power,
-                        temp = cpuTemp
+                        temp = tempResult.temperature,
+                        isBatteryTemp = tempResult.isBattery
                     )
                     
                     // 3. THROTTLE (The Fix) - Update every 0.1 seconds (100ms)
