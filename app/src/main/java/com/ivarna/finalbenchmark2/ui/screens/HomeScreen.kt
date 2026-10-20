@@ -580,7 +580,7 @@ fun HomeScreen(
                                                     modifier = Modifier.fillMaxWidth(), // Inherit internal width from glass card
                                                     icon = Icons.Rounded.Thermostat,
                                                     label = "TEMP",
-                                                    value = if (cpuTemp > 0) "${String.format("%.0f", cpuTemp)}°C" else if (batteryTemp > 0) "${String.format("%.0f", batteryTemp)}°C" else "--",
+                                                    value = if (cpuTemp > 0) "${String.format("%.0f", cpuTemp)}°C" else "--",
                                                     color = MaterialTheme.colorScheme.error,
                                                     onClick = { isSystemStatsExpanded = !isSystemStatsExpanded }
                                                 )

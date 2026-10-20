@@ -22,12 +22,6 @@ class TemperatureUtils(private val context: Context) {
             return hpmTemp
         }
 
-        // 3. Fallback to battery temperature if CPU thermal sensors are inaccessible
-        val batteryTemp = getBatteryTemperature()
-        if (batteryTemp > 0f) {
-            return batteryTemp
-        }
-
         return -1f
     }
 
