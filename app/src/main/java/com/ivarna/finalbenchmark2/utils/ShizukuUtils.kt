@@ -6,7 +6,6 @@ import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
-import rikka.shizuku.ShizukuProvider
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.lang.reflect.Method
@@ -35,20 +34,9 @@ object ShizukuUtils {
     /**
      * Checks if Shizuku service is running and binder is alive.
      */
-    fun isShizukuAvailable(context: Context? = null): Boolean {
+    fun isShizukuAvailable(): Boolean {
         return try {
-            if (Shizuku.pingBinder()) {
-                true
-            } else {
-                if (context != null) {
-                    try {
-                        ShizukuProvider.requestBinderForNonProviderProcess(context)
-                    } catch (e: Throwable) {
-                        Log.d(TAG, "ShizukuProvider.requestBinderForNonProviderProcess failed: ${e.message}")
-                    }
-                }
-                Shizuku.pingBinder()
-            }
+            Shizuku.pingBinder()
         } catch (e: Throwable) {
             Log.d(TAG, "Shizuku pingBinder failed: ${e.message}")
             false
@@ -58,9 +46,9 @@ object ShizukuUtils {
     /**
      * Checks if Shizuku permission has been granted to the application.
      */
-    fun hasShizukuPermission(context: Context? = null): Boolean {
+    fun hasShizukuPermission(): Boolean {
         return try {
-            if (!isShizukuAvailable(context)) return false
+            if (!isShizukuAvailable()) return false
             if (Shizuku.isPreV11()) {
                 false
             } else {
@@ -75,9 +63,9 @@ object ShizukuUtils {
     /**
      * Requests Shizuku permission if service is running and permission not yet granted.
      */
-    fun requestShizukuPermission(requestCode: Int = SHIZUKU_PERMISSION_REQUEST_CODE, context: Context? = null) {
+    fun requestShizukuPermission(requestCode: Int = SHIZUKU_PERMISSION_REQUEST_CODE) {
         try {
-            if (isShizukuAvailable(context)) {
+            if (isShizukuAvailable()) {
                 Log.d(TAG, "Requesting Shizuku permission with code $requestCode")
                 Shizuku.requestPermission(requestCode)
             } else {
@@ -141,8 +129,8 @@ object ShizukuUtils {
      * @param command The shell command to execute
      * @return Standard output of the command if successful or non-empty, null otherwise.
      */
-    suspend fun executeCommand(command: String, context: Context? = null): String? = withContext(Dispatchers.IO) {
-        if (!hasShizukuPermission(context)) {
+    suspend fun executeCommand(command: String): String? = withContext(Dispatchers.IO) {
+        if (!hasShizukuPermission()) {
             Log.d(TAG, "Cannot execute Shizuku command: permission not granted")
             return@withContext null
         }

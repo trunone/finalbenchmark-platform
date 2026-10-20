@@ -95,8 +95,8 @@ fun SettingsScreen(
 
         fun refreshAccessStatus() {
             scope.launch {
-                val shizukuGranted = RootAccessManager.isShizukuGranted(context)
-                val shizukuAvailable = com.ivarna.finalbenchmark2.utils.ShizukuUtils.isShizukuAvailable(context)
+                val shizukuGranted = RootAccessManager.isShizukuGranted()
+                val shizukuAvailable = com.ivarna.finalbenchmark2.utils.ShizukuUtils.isShizukuAvailable()
                 isShizukuGranted = shizukuGranted
                 isShizukuAvailable = shizukuAvailable
 
@@ -212,12 +212,12 @@ fun SettingsScreen(
                 }
         }
 
-        val onShizukuAccessChange: (Boolean) -> Unit = remember(isShizukuAvailable, isShizukuGranted, context) {
+        val onShizukuAccessChange: (Boolean) -> Unit = remember(isShizukuAvailable, isShizukuGranted) {
                 { enabled ->
                         useShizukuAccess = enabled
                         rootAccessPreferences.setUseShizukuAccess(enabled)
                         if (enabled && isShizukuAvailable && !isShizukuGranted) {
-                                com.ivarna.finalbenchmark2.utils.ShizukuUtils.requestShizukuPermission(context = context)
+                                com.ivarna.finalbenchmark2.utils.ShizukuUtils.requestShizukuPermission()
                         }
                 }
         }
@@ -384,7 +384,7 @@ fun SettingsScreen(
                                             Spacer(modifier = Modifier.height(12.dp))
                                             Button(
                                                 onClick = {
-                                                    com.ivarna.finalbenchmark2.utils.ShizukuUtils.requestShizukuPermission(context = context)
+                                                    com.ivarna.finalbenchmark2.utils.ShizukuUtils.requestShizukuPermission()
                                                 },
                                                 modifier = Modifier.fillMaxWidth(),
                                                 shape = RoundedCornerShape(10.dp),
