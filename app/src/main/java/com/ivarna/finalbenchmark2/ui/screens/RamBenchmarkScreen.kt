@@ -157,7 +157,6 @@ fun RamBenchmarkScreen(
 
     val tint = RAM_TEST_TINT[state.currentTest] ?: Color(0xFF4FC3F7)
     val scrollState = rememberLazyListState()
-    var listCoordinates by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
 
     // Map 5 tests to states
     val testStates = remember(state.currentTest, state.completedTests, state.isRunning) {
@@ -455,32 +454,25 @@ fun RamBenchmarkScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .onGloballyPositioned { listCoordinates = it }
             ) {
                 // Section 1: Sequential Bandwidth
                 item { RamSectionHeader(title = "SEQUENTIAL BANDWIDTH", tint = tint) }
                 items(testStates.subList(0, 2)) { test ->
-                    Box(modifier = Modifier.ramWheelCurve(scrollState, listCoordinates)) {
-                        RamTimelineTestRow(test = test, activeTint = tint)
-                    }
+                    RamTimelineTestRow(test = test, activeTint = tint)
                 }
 
                 // Section 2: Memory Operations
                 item { Spacer(modifier = Modifier.height(16.dp)) }
                 item { RamSectionHeader(title = "MEMORY OPERATIONS", tint = tint) }
                 items(testStates.subList(2, 4)) { test ->
-                    Box(modifier = Modifier.ramWheelCurve(scrollState, listCoordinates)) {
-                        RamTimelineTestRow(test = test, activeTint = tint)
-                    }
+                    RamTimelineTestRow(test = test, activeTint = tint)
                 }
 
                 // Section 3: Concurrent Access
                 item { Spacer(modifier = Modifier.height(16.dp)) }
                 item { RamSectionHeader(title = "CONCURRENT ACCESS", tint = tint) }
                 items(testStates.subList(4, 5)) { test ->
-                    Box(modifier = Modifier.ramWheelCurve(scrollState, listCoordinates)) {
-                        RamTimelineTestRow(test = test, activeTint = tint)
-                    }
+                    RamTimelineTestRow(test = test, activeTint = tint)
                 }
             }
         }
@@ -628,29 +620,21 @@ private fun RamTimelineTestRow(
     val isRunning = test.status == RamTestStatus.RUNNING
     val isCompleted = test.status == RamTestStatus.COMPLETED
     
-    val rowAlpha = if (isRunning) 1f else if (isCompleted) 0.8f else 0.4f
-    val targetScale = if (isRunning) 1.05f else 1f
-    val scale by animateFloatAsState(
-        targetValue = targetScale,
-        animationSpec = tween(300, easing = FastOutSlowInEasing),
-        label = "rowScale"
-    )
+    val rowAlpha = if (isRunning) 1f else if (isCompleted) 0.85f else 0.5f
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp, horizontal = if (isRunning) 12.dp else 24.dp)
+            .padding(vertical = 4.dp, horizontal = 24.dp)
             .graphicsLayer {
                 alpha = rowAlpha
-                scaleX = scale
-                scaleY = scale
             }
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(12.dp))
             .then(
                 if (isRunning) {
                     Modifier
                         .background(activeTint.copy(alpha = 0.15f))
-                        .border(1.dp, activeTint.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                        .border(1.dp, activeTint.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
                 } else {
                     Modifier
                 }
@@ -840,29 +824,3 @@ private fun RamHUDMetric(
     }
 }
 
-private fun Modifier.ramWheelCurve(
-    scrollState: androidx.compose.foundation.lazy.LazyListState,
-    listCoordinates: androidx.compose.ui.layout.LayoutCoordinates?
-): Modifier = this.composed {
-    var itemY by remember { mutableStateOf(0f) }
-    
-    Modifier
-        .onGloballyPositioned { coordinates ->
-             itemY = coordinates.positionInWindow().y
-        }
-        .graphicsLayer {
-            val viewportHeight = scrollState.layoutInfo.viewportSize.height.toFloat()
-            
-            val listY = listCoordinates?.positionInWindow()?.y ?: 0f
-            val centerY = listY + (viewportHeight / 2f)
-            
-            val distanceFromCenter = itemY - centerY
-            
-            val normalizedDist = (distanceFromCenter / (viewportHeight / 1.6f)).coerceIn(-1f, 1f)
-            
-            val maxTranslationX = 60.dp.toPx()
-            
-            translationX = maxTranslationX * (1f - (normalizedDist * normalizedDist)) 
-            alpha = 1f - 0.7f * Math.abs(normalizedDist)
-        }
-}

@@ -168,7 +168,6 @@ fun ProductivityBenchmarkScreen(
 
     val tint = PROD_TEST_TINT[state.currentTest] ?: Color(0xFF7C4DFF)
     val scrollState = rememberLazyListState()
-    var listCoordinates by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
 
     // Map 9 tests to states
     val testStates = remember(state.currentTest, state.completedTests, state.isRunning) {
@@ -508,32 +507,25 @@ fun ProductivityBenchmarkScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .onGloballyPositioned { listCoordinates = it }
             ) {
                 // Section 1: Office Operations
                 item { ProdSectionHeader(title = "OFFICE OPERATIONS", tint = tint) }
                 items(testStates.subList(0, 3)) { test ->
-                    Box(modifier = Modifier.prodWheelCurve(scrollState, listCoordinates)) {
-                        ProdTimelineTestRow(test = test, activeTint = tint)
-                    }
+                    ProdTimelineTestRow(test = test, activeTint = tint)
                 }
 
                 // Section 2: Media Operations
                 item { Spacer(modifier = Modifier.height(16.dp)) }
                 item { ProdSectionHeader(title = "MEDIA OPERATIONS", tint = tint) }
                 items(testStates.subList(3, 6)) { test ->
-                    Box(modifier = Modifier.prodWheelCurve(scrollState, listCoordinates)) {
-                        ProdTimelineTestRow(test = test, activeTint = tint)
-                    }
+                    ProdTimelineTestRow(test = test, activeTint = tint)
                 }
 
                 // Section 3: Video Engine
                 item { Spacer(modifier = Modifier.height(16.dp)) }
                 item { ProdSectionHeader(title = "VIDEO ENGINE", tint = tint) }
                 items(testStates.subList(6, 9)) { test ->
-                    Box(modifier = Modifier.prodWheelCurve(scrollState, listCoordinates)) {
-                        ProdTimelineTestRow(test = test, activeTint = tint)
-                    }
+                    ProdTimelineTestRow(test = test, activeTint = tint)
                 }
             }
         }
@@ -681,29 +673,21 @@ private fun ProdTimelineTestRow(
     val isRunning = test.status == ProdTestStatus.RUNNING
     val isCompleted = test.status == ProdTestStatus.COMPLETED
     
-    val rowAlpha = if (isRunning) 1f else if (isCompleted) 0.8f else 0.4f
-    val targetScale = if (isRunning) 1.05f else 1f
-    val scale by animateFloatAsState(
-        targetValue = targetScale,
-        animationSpec = tween(300, easing = FastOutSlowInEasing),
-        label = "rowScale"
-    )
+    val rowAlpha = if (isRunning) 1f else if (isCompleted) 0.85f else 0.5f
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp, horizontal = if (isRunning) 12.dp else 24.dp)
+            .padding(vertical = 4.dp, horizontal = 24.dp)
             .graphicsLayer {
                 alpha = rowAlpha
-                scaleX = scale
-                scaleY = scale
             }
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(12.dp))
             .then(
                 if (isRunning) {
                     Modifier
                         .background(activeTint.copy(alpha = 0.15f))
-                        .border(1.dp, activeTint.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                        .border(1.dp, activeTint.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
                 } else {
                     Modifier
                 }
@@ -893,29 +877,3 @@ private fun ProdHUDMetric(
     }
 }
 
-private fun Modifier.prodWheelCurve(
-    scrollState: androidx.compose.foundation.lazy.LazyListState,
-    listCoordinates: androidx.compose.ui.layout.LayoutCoordinates?
-): Modifier = this.composed {
-    var itemY by remember { mutableStateOf(0f) }
-    
-    Modifier
-        .onGloballyPositioned { coordinates ->
-             itemY = coordinates.positionInWindow().y
-        }
-        .graphicsLayer {
-            val viewportHeight = scrollState.layoutInfo.viewportSize.height.toFloat()
-            
-            val listY = listCoordinates?.positionInWindow()?.y ?: 0f
-            val centerY = listY + (viewportHeight / 2f)
-            
-            val distanceFromCenter = itemY - centerY
-            
-            val normalizedDist = (distanceFromCenter / (viewportHeight / 1.6f)).coerceIn(-1f, 1f)
-            
-            val maxTranslationX = 60.dp.toPx()
-            
-            translationX = maxTranslationX * (1f - (normalizedDist * normalizedDist)) 
-            alpha = 1f - 0.7f * Math.abs(normalizedDist)
-        }
-}
