@@ -136,9 +136,6 @@ fun BenchmarkScreen(
         }
     }
     
-    // Track list position for wheel calculations
-    var listCoordinates by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
-
     // Handle back press - stop benchmark if running
     BackHandler(enabled = uiState.isRunning) {
         viewModel.stopBenchmark()
@@ -164,33 +161,20 @@ fun BenchmarkScreen(
         }
     }
 
-    // Handle Scroll to active item - Center it!
-    val density = LocalDensity.current
+    // Handle Scroll to active item
     val activeIndex = uiState.testStates.indexOfFirst { it.status == TestStatus.RUNNING }
     LaunchedEffect(activeIndex) {
         if (activeIndex >= 0) {
-            // Strict centering logic
             val singleCoreCount = uiState.testStates.count { !it.name.startsWith("Multi-Core", ignoreCase = true) }
-            
-            // Calculate list index (Offset -5 per user request):
             val baseListIndex = if (activeIndex < singleCoreCount) {
-                // Header (1) + activeIndex
                 1 + activeIndex
             } else {
-                // Header S (1) + SingleCount + Spacer (1) + Header M (1) + (activeIndex - SingleCount)
-                // = 3 + activeIndex
                 3 + activeIndex
             }
-            
-            // Apply offset -2 (User Report: "-3 was showing 1 benchmark behind")
-            // Trend: -5 (2 behind) -> -3 (1 behind) -> -2 (Should be centered/active).
-            // By scrolling (Active - 2) to the top, Active becomes the 3rd item visible.
-            val targetListIndex = maxOf(0, baseListIndex - 2)
-
-            // Simple scroll to top of the target item. 
+            val targetListIndex = maxOf(0, baseListIndex - 1)
             scrollState.animateScrollToItem(
                 index = targetListIndex,
-                scrollOffset = 0 
+                scrollOffset = 0
             )
         }
     }
@@ -353,48 +337,33 @@ fun BenchmarkScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
-                        .onGloballyPositioned { listCoordinates = it }
                 ) {
                     val singleCoreTests = uiState.testStates.filter { !it.name.startsWith("Multi-Core", ignoreCase = true) }
                     val multiCoreTests = uiState.testStates.filter { it.name.startsWith("Multi-Core", ignoreCase = true) }
 
-                    // Dots removed here
-
                     // Single Core Section
                     if (singleCoreTests.isNotEmpty()) {
                         item { 
-                            Box(modifier = Modifier.wheelCurve(scrollState, listCoordinates)) {
-                                val headerTitle = if (benchmarkCategory == com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkCategory.AI) "AI OPERATIONS" else "SINGLE CORE OPERATIONS"
-                                SectionHeader(headerTitle) 
-                            }
+                            val headerTitle = if (benchmarkCategory == com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkCategory.AI) "AI OPERATIONS" else "SINGLE CORE OPERATIONS"
+                            SectionHeader(headerTitle)
                         }
                         items(singleCoreTests) { test ->
-                            Box(modifier = Modifier.wheelCurve(scrollState, listCoordinates)) {
-                                TimelineTestRow(test = test)
-                            }
+                            TimelineTestRow(test = test)
                         }
                     }
 
                     // Multi Core Section
                     if (multiCoreTests.isNotEmpty()) {
                         item { 
-                            Box(modifier = Modifier.wheelCurve(scrollState, listCoordinates)) {
-                                Spacer(modifier = Modifier.height(24.dp))
-                            }
+                            Spacer(modifier = Modifier.height(24.dp))
                         }
                         item {
-                           Box(modifier = Modifier.wheelCurve(scrollState, listCoordinates)) {
-                               SectionHeader("MULTI CORE OPERATIONS")
-                           }
+                            SectionHeader("MULTI CORE OPERATIONS")
                         }
                         items(multiCoreTests) { test ->
-                            Box(modifier = Modifier.wheelCurve(scrollState, listCoordinates)) {
-                                TimelineTestRow(test = test)
-                            }
+                            TimelineTestRow(test = test)
                         }
                     }
-
-                    // Dots removed here
                 }
             }
 
@@ -560,37 +529,21 @@ fun TimelineTestRow(test: TestState) {
     val isRunning = test.status == TestStatus.RUNNING
     val isCompleted = test.status == TestStatus.COMPLETED
     
-    // Focus Mode:
-    // Running: High opacity, Glass Card, Scaled up slightly
-    // Completed: Medium opacity, clean
-    // Pending: Low opacity (faded out)
-    
-    val rowAlpha = if (isRunning) 1f else if (isCompleted) 0.8f else 0.4f
-    
-    // Animate scale for the active focus effect
-    val targetScale = if (isRunning) 1.05f else 1f
-    val scale by animateFloatAsState(
-        targetValue = targetScale,
-        animationSpec = tween(300, easing = FastOutSlowInEasing),
-        label = "rowScale"
-    )
+    val rowAlpha = if (isRunning) 1f else if (isCompleted) 0.85f else 0.5f
 
-    // Glassy Highlight for Running State
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp, horizontal = if (isRunning) 12.dp else 24.dp) // Indent inactive items
+            .padding(vertical = 4.dp, horizontal = 24.dp)
             .graphicsLayer {
                 alpha = rowAlpha
-                scaleX = scale
-                scaleY = scale
             }
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(12.dp))
             .then(
                 if (isRunning) {
                     Modifier
-                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)) // Glass tint
-                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f))
+                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
                 } else {
                     Modifier
                 }
@@ -813,41 +766,3 @@ fun HUDMetric(
 }
 
 
-// Wheel Curve Modifier
-fun Modifier.wheelCurve(
-    scrollState: androidx.compose.foundation.lazy.LazyListState,
-    listCoordinates: androidx.compose.ui.layout.LayoutCoordinates?
-): Modifier = this.composed {
-    var itemY by remember { mutableStateOf(0f) }
-    
-    Modifier
-        .onGloballyPositioned { coordinates ->
-             itemY = coordinates.positionInWindow().y
-        }
-        .graphicsLayer {
-            val viewportHeight = scrollState.layoutInfo.viewportSize.height.toFloat()
-            
-            // Calculate accurate center based on list position in window
-            // If listCoordinates is not yet available, fallback to simple view height center
-            val listY = listCoordinates?.positionInWindow()?.y ?: 0f
-            val centerY = listY + (viewportHeight / 2f)
-            
-            // If listY is 0 (first frame), usage of just positionInWindow might be offset?
-            // itemY is also global.
-            // distance = itemGlobalY - listCenterGlobalY
-            val distanceFromCenter = itemY - centerY
-            
-            // Normalized distance [-1, 1] relative to half height
-            val normalizedDist = (distanceFromCenter / (viewportHeight / 1.6f)).coerceIn(-1f, 1f)
-            
-            val maxTranslationX = 60.dp.toPx() // Further reduced from 80dp to 60dp to reduce left gap
-            
-            // Apply translation
-            // 1 - dist^2 creates a nice bell curve
-            translationX = maxTranslationX * (1f - (normalizedDist * normalizedDist)) 
-            
-            // scaleX = 1f + 0.1f * (1f - Math.abs(normalizedDist)) // subtle scale up center?
-            
-            alpha = 1f - 0.7f * Math.abs(normalizedDist) // Fade out edges
-        }
-}
