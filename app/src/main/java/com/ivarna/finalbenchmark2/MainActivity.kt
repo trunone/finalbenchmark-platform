@@ -829,8 +829,7 @@ class MainActivity : ComponentActivity() {
      */
     private fun applyGovernorHints() {
         Log.i(TAG, "Checking CPU Governor status...")
-        
-        // Just check current governor and update status
+        trySetGovernorWithRoot()
         updateGovernorStatus()
     }
     
@@ -1012,17 +1011,11 @@ class MainActivity : ComponentActivity() {
      */
     private fun checkRootAccess(): Boolean {
         return try {
-            // Use RootAccessManager for proper caching and consistency
-            // Note: This is a suspend function, but we're calling it synchronously here
-            // In practice, this should be called from a coroutine context
-            Log.i(TAG, "Root check: using RootAccessManager")
-            
-            // Since this method is called from non-suspend contexts in MainActivity,
-            // we'll use a simple approach that doesn't block the main thread
-            val cachedResult = com.ivarna.finalbenchmark2.utils.RootAccessManager.getCachedRootAccess()
+            Log.i(TAG, "Elevated access check: using RootAccessManager")
+            val cachedResult = com.ivarna.finalbenchmark2.utils.RootAccessManager.getCachedElevatedAccess()
             cachedResult ?: false
         } catch (e: Exception) {
-            Log.e(TAG, "Error checking root access", e)
+            Log.e(TAG, "Error checking elevated access", e)
             false
         }
     }

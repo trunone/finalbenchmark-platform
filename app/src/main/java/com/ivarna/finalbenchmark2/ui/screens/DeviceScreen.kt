@@ -1409,8 +1409,8 @@ fun GpuOverviewCard(
                                         }
                                         com.ivarna.finalbenchmark2.utils.GpuFrequencyReader
                                                 .GpuFrequencyState.RequiresRoot -> {
-                                                InfoRow("Current Frequency", "Requires Root Access")
-                                                InfoRow("Max Frequency", "Requires Root Access")
+                                                InfoRow("Current Frequency", "Requires Root / Shizuku")
+                                                InfoRow("Max Frequency", "Requires Root / Shizuku")
                                         }
                                         com.ivarna.finalbenchmark2.utils.GpuFrequencyReader
                                                 .GpuFrequencyState.NotSupported -> {

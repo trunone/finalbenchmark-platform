@@ -1,38 +1,30 @@
 package com.ivarna.finalbenchmark2.utils
 
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Singleton class to manage root access state across the application
- * This prevents repeated root checks and improves performance by caching results
- * 
- * The heavy root check (Runtime.getRuntime().exec() calls) happens only once per app session
- * Subsequent checks during Activity recreation (theme changes) return cached results instantly
+ * Singleton class to manage root and Shizuku access state across the application
+ * This prevents repeated checks and improves performance by caching results
  */
 object RootAccessManager {
     private var cachedRootState: Boolean? = null
+    private var cachedShizukuState: Boolean? = null
     private val mutex = Mutex()
 
     /**
-     * Returns cached value if available, otherwise performs the heavy check.
-     * This is safe to call during Activity recreation and theme changes.
-     * 
-     * @return true if root access is granted, false otherwise
+     * Returns cached root status if available, otherwise performs check.
      */
     suspend fun isRootGranted(): Boolean {
-        // Double-checked locking pattern for optimal performance
         val cachedValue = cachedRootState
         if (cachedValue != null) {
             return cachedValue
         }
-        
+
         return mutex.withLock {
-            // Check again inside the lock to avoid race conditions
             if (cachedRootState == null) {
-                // This is the HEAVY blocking call - run it off the main thread
                 val result = withContext(Dispatchers.IO) {
                     RootUtils.canExecuteRootCommandRobust()
                 }
@@ -43,47 +35,81 @@ object RootAccessManager {
     }
 
     /**
-     * Forces a re-check by clearing the cache and performing a new root check.
-     * Use this only for the "Retry" button functionality in RootCheckScreen.
-     * 
-     * @return true if root access is granted, false otherwise
+     * Returns cached Shizuku status if available, otherwise performs check.
+     */
+    suspend fun isShizukuGranted(): Boolean {
+        val cachedValue = cachedShizukuState
+        if (cachedValue != null) {
+            return cachedValue
+        }
+
+        return mutex.withLock {
+            if (cachedShizukuState == null) {
+                val result = withContext(Dispatchers.IO) {
+                    ShizukuUtils.hasShizukuPermission()
+                }
+                cachedShizukuState = result
+            }
+            cachedShizukuState!!
+        }
+    }
+
+    /**
+     * Returns true if either Root or Shizuku access is granted.
+     */
+    suspend fun isElevatedAccessGranted(): Boolean {
+        return isRootGranted() || isShizukuGranted()
+    }
+
+    /**
+     * Forces a re-check by clearing cache and performing new checks.
      */
     suspend fun forceRefresh(): Boolean {
         return mutex.withLock {
-            // Clear cache first
             cachedRootState = null
-            
-            // Perform new check
-            val result = withContext(Dispatchers.IO) {
+            cachedShizukuState = null
+
+            val rootResult = withContext(Dispatchers.IO) {
                 RootUtils.canExecuteRootCommandRobust()
             }
-            cachedRootState = result
-            result
+            val shizukuResult = withContext(Dispatchers.IO) {
+                ShizukuUtils.hasShizukuPermission()
+            }
+
+            cachedRootState = rootResult
+            cachedShizukuState = shizukuResult
+
+            rootResult || shizukuResult
         }
     }
-    
-    /**
-     * Gets the cached root access state without performing a new check.
-     * Returns null if no cached result exists.
-     * 
-     * @return cached Boolean value or null if not checked yet
-     */
+
     fun getCachedRootAccess(): Boolean? {
         return cachedRootState
     }
-    
+
+    fun getCachedShizukuAccess(): Boolean? {
+        return cachedShizukuState
+    }
+
+    fun getCachedElevatedAccess(): Boolean? {
+        val r = cachedRootState
+        val s = cachedShizukuState
+        if (r == null && s == null) return null
+        return (r == true) || (s == true)
+    }
+
     /**
-     * Legacy method for backward compatibility with existing code.
-     * Use isRootGranted() for new code.
+     * Returns true if elevated access (Root or Shizuku) is available.
      */
     suspend fun hasRootAccess(): Boolean {
-        return isRootGranted()
+        return isElevatedAccessGranted()
     }
-    
+
     /**
-     * Resets the cached root access state (for testing purposes)
+     * Resets cached states
      */
     fun reset() {
         cachedRootState = null
+        cachedShizukuState = null
     }
 }

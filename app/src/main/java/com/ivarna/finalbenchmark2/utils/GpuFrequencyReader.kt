@@ -54,10 +54,10 @@ class GpuFrequencyReader {
      */
     suspend fun readGpuFrequency(): GpuFrequencyState = withContext(Dispatchers.IO) {
         try {
-            // Step 1: Check if root is available
+            // Step 1: Check if root or Shizuku elevated access is available
             // Use the central RootAccessManager to ensure consistency with the rest of the app
-            if (!RootAccessManager.isRootGranted()) {
-                Log.w(TAG, "Root access not available (checked via RootAccessManager), trying fallback methods")
+            if (!RootAccessManager.isElevatedAccessGranted()) {
+                Log.w(TAG, "Elevated access (Root/Shizuku) not available, trying fallback methods")
                 
                 // Try non-root fallback methods
                 val fallbackReader = GpuFrequencyFallback()

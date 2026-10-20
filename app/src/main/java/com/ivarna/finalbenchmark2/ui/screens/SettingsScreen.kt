@@ -14,7 +14,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.rounded.*
@@ -75,22 +78,22 @@ fun SettingsScreen(
         val currentThemeMode = themePreferences.getThemeMode()
         var selectedThemeIndex by remember { mutableStateOf(getThemeIndex(currentThemeMode)) }
 
-        // Root access state - now using RootAccessManager for caching
+        // Root / Shizuku access state
         var useRootAccess by remember { mutableStateOf(rootAccessPreferences.getUseRootAccess()) }
 
-        // FIX: Use RootAccessManager to prevent UI freezing during theme changes
-        // This ensures the heavy root check happens only once per app session
         var isDeviceRooted by remember { mutableStateOf(false) }
-        var isRootCheckLoading by remember { mutableStateOf(true) }
+        var isShizukuGranted by remember { mutableStateOf(false) }
+        var isShizukuAvailable by remember { mutableStateOf(false) }
+        var isAccessCheckLoading by remember { mutableStateOf(true) }
 
-        // LaunchedEffect runs when the screen is first created and during Activity recreation
-        // Because RootAccessManager is a Singleton, it returns cached results instantly
         LaunchedEffect(Unit) {
                 isDeviceRooted = RootAccessManager.isRootGranted()
-                isRootCheckLoading = false
+                isShizukuGranted = RootAccessManager.isShizukuGranted()
+                isShizukuAvailable = com.ivarna.finalbenchmark2.utils.ShizukuUtils.isShizukuAvailable()
+                isAccessCheckLoading = false
         }
 
-        val canExecuteRoot = isDeviceRooted // Simplified logic
+        val hasElevatedAccess = isDeviceRooted || isShizukuGranted
 
         // Update theme when selection changes
         val onThemeChange: (Int) -> Unit = remember {
@@ -226,7 +229,7 @@ fun SettingsScreen(
                                 verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
 
-                                // Root Access Card
+                                // Root & Shizuku Access Card
                                 GlassSettingCard {
                                     Column(modifier = Modifier.padding(20.dp)) {
                                         Row(
@@ -236,22 +239,26 @@ fun SettingsScreen(
                                         ) {
                                             Column(modifier = Modifier.weight(1f)) {
                                                 Text(
-                                                    text = "Use Root Access",
+                                                    text = "Use Root / Shizuku Access",
                                                     fontSize = 16.sp,
                                                     fontWeight = FontWeight.Bold,
                                                     color = MaterialTheme.colorScheme.onSurface
                                                 )
 
+                                                val statusText = when {
+                                                    isDeviceRooted -> "Root access available and working"
+                                                    isShizukuGranted -> "Shizuku access available and working"
+                                                    isShizukuAvailable -> "Shizuku service detected (Permission required)"
+                                                    else -> "No Root or Shizuku access detected"
+                                                }
+
                                                 Text(
-                                                    text = if (isDeviceRooted) {
-                                                        if (canExecuteRoot) "Root access available and working"
-                                                        else "Root access available but not working"
-                                                    } else {
-                                                        "No root access detected"
-                                                    },
+                                                    text = statusText,
                                                     fontSize = 13.sp,
-                                                    color = if (isDeviceRooted && canExecuteRoot)
+                                                    color = if (hasElevatedAccess)
                                                         MaterialTheme.colorScheme.primary
+                                                    else if (isShizukuAvailable)
+                                                        MaterialTheme.colorScheme.secondary
                                                     else
                                                         MaterialTheme.colorScheme.error,
                                                     modifier = Modifier.padding(top = 4.dp)
@@ -261,7 +268,7 @@ fun SettingsScreen(
                                             Switch(
                                                 checked = useRootAccess,
                                                 onCheckedChange = { onRootAccessChange(it) },
-                                                enabled = !isRootCheckLoading && isDeviceRooted,
+                                                enabled = !isAccessCheckLoading && (hasElevatedAccess || isShizukuAvailable),
                                                 colors = SwitchDefaults.colors(
                                                     checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
                                                     checkedTrackColor = MaterialTheme.colorScheme.primary,
@@ -269,6 +276,28 @@ fun SettingsScreen(
                                                     uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
                                                 )
                                             )
+                                        }
+
+                                        if (isShizukuAvailable && !isShizukuGranted && !isDeviceRooted) {
+                                            Spacer(modifier = Modifier.height(12.dp))
+                                            Button(
+                                                onClick = {
+                                                    com.ivarna.finalbenchmark2.utils.ShizukuUtils.requestShizukuPermission()
+                                                    scope.launch {
+                                                        delay(1000)
+                                                        RootAccessManager.forceRefresh()
+                                                        isDeviceRooted = RootAccessManager.isRootGranted()
+                                                        isShizukuGranted = RootAccessManager.isShizukuGranted()
+                                                    }
+                                                },
+                                                modifier = Modifier.fillMaxWidth(),
+                                                shape = RoundedCornerShape(10.dp),
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = MaterialTheme.colorScheme.secondary
+                                                )
+                                            ) {
+                                                Text("Grant Shizuku Permission")
+                                            }
                                         }
                                     }
                                 }

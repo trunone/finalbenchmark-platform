@@ -84,7 +84,7 @@ fun GpuFrequencyCard(
                     
                     // Source indicator
                     Text(
-                        text = "Source: Root (${data.sourcePath})",
+                        text = "Source: Sysfs (${data.sourcePath})",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -105,10 +105,9 @@ fun GpuFrequencyCard(
                 
                 GpuFrequencyReader.GpuFrequencyState.RequiresRoot -> {
                     Text(
-                        text = "GPU frequency monitoring requires root access",
+                        text = "GPU frequency monitoring requires Root or Shizuku access",
                         color = MaterialTheme.colorScheme.error
                     )
-                    // Button to request root would go here if needed
                 }
                 
                 GpuFrequencyReader.GpuFrequencyState.NotSupported -> {
