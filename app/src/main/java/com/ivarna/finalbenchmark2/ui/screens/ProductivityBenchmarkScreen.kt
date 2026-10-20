@@ -836,7 +836,7 @@ private fun ProdHUDMonitor(
             ProdHUDMetric(
                 icon = Icons.Default.Thermostat,
                 label = "CPU TEMP",
-                value = String.format("%.1f°C", stats.temp),
+                value = if (stats.temp > 0) String.format("%.1f°C", stats.temp) else "--°C",
                 accentColor = Color(0xFFFF7043)
             )
 
