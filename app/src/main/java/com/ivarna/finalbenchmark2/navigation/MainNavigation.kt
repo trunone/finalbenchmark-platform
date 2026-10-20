@@ -241,9 +241,9 @@ fun MainNavigation(
                         )
                     }
                     HomeScreen(
-                            onStartBenchmark = { preset, type ->
+                            onStartBenchmark = { preset, type, isStress ->
                                 // No model download gate — AI benchmark uses native GEMM (no TFLite)
-                                navController.navigate("benchmark/$preset/$type")
+                                navController.navigate("benchmark/$preset/$type?isStress=$isStress")
                             },
                             onNavigateToSettings = { navController.navigate("settings") },
                             historyRepository = historyRepository,
@@ -387,9 +387,9 @@ fun MainNavigation(
                         onBackClick = { navController.popBackStack() }
                     )
                 }
-                // Update benchmark route to accept type
+                // Update benchmark route to accept type and stress mode option
                 composable(
-                    route = "benchmark/{preset}/{type}",
+                    route = "benchmark/{preset}/{type}?isStress={isStress}",
                     enterTransition = enterTransition,
                     exitTransition = exitTransition,
                     popEnterTransition = popEnterTransition,
@@ -397,6 +397,7 @@ fun MainNavigation(
                 ) { backStackEntry ->
                     val preset = backStackEntry.arguments?.getString("preset") ?: "Auto"
                     val typeString = backStackEntry.arguments?.getString("type") ?: "CPU"
+                    val isStress = backStackEntry.arguments?.getString("isStress")?.toBoolean() ?: false
                     val category = try {
                         com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkCategory.valueOf(typeString)
                     } catch (e: Exception) {
@@ -514,6 +515,7 @@ fun MainNavigation(
                         BenchmarkScreen(
                                 preset = preset,
                                 benchmarkCategory = category,
+                                isStressMode = isStress,
                                 onBenchmarkComplete = { summaryJson ->
                                     // URL-encode the JSON to handle special characters properly
                                     val encodedJson = java.net.URLEncoder.encode(summaryJson, "UTF-8")

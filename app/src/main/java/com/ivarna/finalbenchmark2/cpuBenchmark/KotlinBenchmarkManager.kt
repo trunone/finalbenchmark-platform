@@ -23,10 +23,10 @@ import android.graphics.Bitmap
 class KotlinBenchmarkManager(
     private val context: Context? = null
 ) {
-        private val _benchmarkEvents = MutableSharedFlow<BenchmarkEvent>(replay = 1)
+        private val _benchmarkEvents = MutableSharedFlow<BenchmarkEvent>(extraBufferCapacity = 64)
         val benchmarkEvents: SharedFlow<BenchmarkEvent> = _benchmarkEvents.asSharedFlow()
 
-        private val _benchmarkComplete = MutableSharedFlow<String>(replay = 1)
+        private val _benchmarkComplete = MutableSharedFlow<String>(extraBufferCapacity = 64)
         val benchmarkComplete: SharedFlow<String> = _benchmarkComplete.asSharedFlow()
 
         companion object {
@@ -178,10 +178,7 @@ class KotlinBenchmarkManager(
                         "SINGLE_SOURCE_OF_TRUTH: Starting benchmark execution with device tier: $deviceTier, Category: $category"
                 )
 
-                if (category == BenchmarkCategory.STRESS) {
-                    Log.d(TAG, "Running Stress Test (CPU Loop)")
-                    runCpuBenchmarks(deviceTier, category)
-                } else if (category == BenchmarkCategory.AI) {
+                if (category == BenchmarkCategory.AI) {
                     Log.d(TAG, "Running AI Benchmarks")
                     runAiBenchmarks(deviceTier)
                 } else {

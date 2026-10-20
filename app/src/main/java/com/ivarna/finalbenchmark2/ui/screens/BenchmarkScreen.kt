@@ -99,6 +99,7 @@ import com.ivarna.finalbenchmark2.ui.viewmodels.TestStatus
 fun BenchmarkScreen(
     preset: String,
     benchmarkCategory: com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkCategory = com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkCategory.CPU, // Changed to Enum
+    isStressMode: Boolean = false,
     onBenchmarkComplete: (String) -> Unit,
     onBenchmarkStart: () -> Unit = {},
     onBenchmarkEnd: () -> Unit = {},
@@ -147,8 +148,8 @@ fun BenchmarkScreen(
     LaunchedEffect(Unit) {
         if (!uiState.isRunning && uiState.progress == 0f) {
             onBenchmarkStart()
-            // Pass the benchmark category to the ViewModel
-            viewModel.startBenchmark(preset, benchmarkCategory)
+            // Pass the benchmark category and stress mode option to the ViewModel
+            viewModel.runBenchmarks(preset, benchmarkCategory, isStressMode)
         }
     }
     
@@ -338,37 +339,6 @@ fun BenchmarkScreen(
                             timeText = uiState.estimatedTimeRemaining,
                             elapsedTime = uiState.elapsedTime
                         )
-                        if (uiState.isStressMode) {
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Surface(
-                                onClick = {
-                                    viewModel.finishStressTest()
-                                    onBenchmarkEnd()
-                                },
-                                color = MaterialTheme.colorScheme.errorContainer,
-                                shape = RoundedCornerShape(20.dp),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Close,
-                                        contentDescription = "Stop",
-                                        tint = MaterialTheme.colorScheme.onErrorContainer,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = "STOP STRESS TEST",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onErrorContainer
-                                    )
-                                }
-                            }
-                        }
                         Spacer(modifier = Modifier.height(24.dp))
                     }
                     
