@@ -258,7 +258,11 @@ class BenchmarkViewModel(
         private var benchmarkJob: Job? = null
 
         // NEW IMPLEMENTATION: Delegate to KotlinBenchmarkManager for Single Source of Truth
-        fun runBenchmarks(preset: String = "Auto", category: com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkCategory = com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkCategory.CPU) {
+        fun runBenchmarks(
+            preset: String = "Auto",
+            category: com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkCategory = com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkCategory.CPU,
+            isStressMode: Boolean = false
+        ) {
                 // FIX: Reset state immediately to prevent stale navigation
                 _benchmarkState.value = BenchmarkState.Idle
 
@@ -313,10 +317,8 @@ class BenchmarkViewModel(
                                 // Do NOT turn off warm-up here. Wait for first test to start.
 
                                 // 1. RESET STATE - Initialize test states
-                                val names = com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkName.getByCategory(
-                                    if (category == com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkCategory.STRESS) com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkCategory.CPU else category
-                                )
-                                val testNames = if (category == com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkCategory.CPU || category == com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkCategory.STRESS) {
+                                val names = com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkName.getByCategory(category)
+                                val testNames = if (category == com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkCategory.CPU) {
                                      names.map { it.singleCore() } + names.map { it.multiCore() }
                                 } else {
                                      names.map { it.displayName() }
@@ -325,7 +327,7 @@ class BenchmarkViewModel(
                                 var stressLoopCount = 1
                                 var lastSummaryJson = ""
                                 var lastResults: BenchmarkResults? = null
-                                val isStress = (category == com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkCategory.STRESS)
+                                val isStress = isStressMode
 
                                 do {
                                     _uiState.update {
@@ -686,8 +688,12 @@ class BenchmarkViewModel(
         }
 
         // Legacy function kept for compatibility
-        fun startBenchmark(preset: String = "Auto", category: com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkCategory = com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkCategory.CPU) {
-                runBenchmarks(preset, category)
+        fun startBenchmark(
+            preset: String = "Auto",
+            category: com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkCategory = com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkCategory.CPU,
+            isStressMode: Boolean = false
+        ) {
+                runBenchmarks(preset, category, isStressMode)
         }
 
         private var summaryDeferredJob: Job? = null

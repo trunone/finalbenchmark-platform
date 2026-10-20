@@ -99,6 +99,7 @@ import com.ivarna.finalbenchmark2.ui.viewmodels.TestStatus
 fun BenchmarkScreen(
     preset: String,
     benchmarkCategory: com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkCategory = com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkCategory.CPU, // Changed to Enum
+    isStressMode: Boolean = false,
     onBenchmarkComplete: (String) -> Unit,
     onBenchmarkStart: () -> Unit = {},
     onBenchmarkEnd: () -> Unit = {},
@@ -147,8 +148,8 @@ fun BenchmarkScreen(
     LaunchedEffect(Unit) {
         if (!uiState.isRunning && uiState.progress == 0f) {
             onBenchmarkStart()
-            // Pass the benchmark category to the ViewModel
-            viewModel.startBenchmark(preset, benchmarkCategory)
+            // Pass the benchmark category and stress mode option to the ViewModel
+            viewModel.runBenchmarks(preset, benchmarkCategory, isStressMode)
         }
     }
     

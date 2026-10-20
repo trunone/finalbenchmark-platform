@@ -98,7 +98,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-        onStartBenchmark: (String, String) -> Unit, // Updated signature: (preset, type)
+        onStartBenchmark: (String, String, Boolean) -> Unit, // Updated signature: (preset, type, isStress)
         onNavigateToSettings: () -> Unit = {},
         historyRepository: HistoryRepository? = null,
         hazeState: dev.chrisbanes.haze.HazeState? = null
@@ -353,6 +353,7 @@ fun HomeScreen(
                                 // BENCHMARK CONTROLS
                                 // =========================================================
                                 var selectedBenchmarkCategory by remember { mutableStateOf(com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkCategory.FULL) }
+                                var isStressMode by remember { mutableStateOf(false) }
                                 // EXTERNAL_GPU requires a separate APK; exclude from this dropdown. FULL is pinned first.
                                 val benchmarkCategories = listOf(com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkCategory.FULL) +
                                     com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkCategory.entries
@@ -457,6 +458,33 @@ fun HomeScreen(
                                                     }
                                                 }
                                             }
+
+                                            // Stress Mode Switch Option
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = 4.dp),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(
+                                                        text = "Stress Mode",
+                                                        style = MaterialTheme.typography.bodyLarge,
+                                                        fontWeight = FontWeight.SemiBold,
+                                                        color = MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                    Text(
+                                                        text = "Loop benchmark continuously until stopped",
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                                Switch(
+                                                    checked = isStressMode,
+                                                    onCheckedChange = { isStressMode = it }
+                                                )
+                                            }
                                         }
 
                                         // Start Benchmark Button - Glassmorphic Style
@@ -479,7 +507,7 @@ fun HomeScreen(
                                                         "High Accuracy - Slow" -> "flagship"
                                                         else -> "flagship"
                                                     }
-                                                    onStartBenchmark(deviceTier, selectedBenchmarkCategory.name)
+                                                    onStartBenchmark(deviceTier, selectedBenchmarkCategory.name, isStressMode)
                                                 },
                                             contentAlignment = Alignment.Center
                                         ) {

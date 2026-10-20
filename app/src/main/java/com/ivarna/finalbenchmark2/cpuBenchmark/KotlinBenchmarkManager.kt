@@ -178,10 +178,7 @@ class KotlinBenchmarkManager(
                         "SINGLE_SOURCE_OF_TRUTH: Starting benchmark execution with device tier: $deviceTier, Category: $category"
                 )
 
-                if (category == BenchmarkCategory.STRESS) {
-                    Log.d(TAG, "Running Stress Test (CPU Loop)")
-                    runCpuBenchmarks(deviceTier, category)
-                } else if (category == BenchmarkCategory.AI) {
+                if (category == BenchmarkCategory.AI) {
                     Log.d(TAG, "Running AI Benchmarks")
                     runAiBenchmarks(deviceTier)
                 } else {
