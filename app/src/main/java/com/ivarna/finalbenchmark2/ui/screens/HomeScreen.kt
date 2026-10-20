@@ -580,7 +580,7 @@ fun HomeScreen(
                                                     modifier = Modifier.fillMaxWidth(), // Inherit internal width from glass card
                                                     icon = Icons.Rounded.Thermostat,
                                                     label = "TEMP",
-                                                    value = "${if(cpuTemp > 0) cpuTemp else "--"}°C",
+                                                    value = if (cpuTemp > 0) "${String.format("%.0f", cpuTemp)}°C" else "--",
                                                     color = MaterialTheme.colorScheme.error,
                                                     onClick = { isSystemStatsExpanded = !isSystemStatsExpanded }
                                                 )
@@ -652,8 +652,8 @@ fun HomeScreen(
                                                     modifier = Modifier.fillMaxWidth(),
                                                     horizontalArrangement = Arrangement.SpaceBetween
                                                 ) {
-                                                    DetailIconPair(Icons.Rounded.Memory, "${cpuTemp}°C", "CPU")
-                                                    DetailIconPair(Icons.Rounded.BatteryStd, "${batteryTemp}°C", "Batt")
+                                                    DetailIconPair(Icons.Rounded.Memory, if (cpuTemp > 0) "${String.format("%.1f", cpuTemp)}°C" else "N/A", "CPU")
+                                                    DetailIconPair(Icons.Rounded.BatteryStd, if (batteryTemp > 0) "${String.format("%.1f", batteryTemp)}°C" else "N/A", "Batt")
                                                     DetailIconPair(Icons.Rounded.ElectricBolt, "${String.format("%.1f", powerInfo.voltage)}V", "Volts")
                                                     DetailIconPair(Icons.Rounded.Bolt, "${String.format("%.1f", powerInfo.current)}A", "Amps")
                                                 }

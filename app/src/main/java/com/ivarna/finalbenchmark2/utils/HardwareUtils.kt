@@ -100,7 +100,13 @@ class HardwareUtils(private val context: Context) {
         }
         
         val technology = intent?.getStringExtra(android.os.BatteryManager.EXTRA_TECHNOLOGY) ?: "Unknown"
-        val temperature = (intent?.getIntExtra(android.os.BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0) / 10.0f
+        val rawTemp = intent?.getIntExtra(android.os.BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
+        val temperature = if (rawTemp > 0) {
+            rawTemp / 10.0f
+        } else {
+            val batTemp = TemperatureUtils(context).getBatteryTemperature()
+            if (batTemp > 0f) batTemp else 0.0f
+        }
         val voltage = (intent?.getIntExtra(android.os.BatteryManager.EXTRA_VOLTAGE, 0) ?: 0) / 1000.0f
         
         val health = when (intent?.getIntExtra(android.os.BatteryManager.EXTRA_HEALTH, -1)) {

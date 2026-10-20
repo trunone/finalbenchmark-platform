@@ -787,7 +787,7 @@ fun HUDMonitor(
             HUDMetric(
                 icon = Icons.Default.Bolt,
                 label = "TEMP",
-                value = "${stats.temp.toInt()}°C",
+                value = if (stats.temp > 0) "${stats.temp.toInt()}°C" else "--°C",
                 accentColor = if (stats.temp > 40) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.secondary
             )
 

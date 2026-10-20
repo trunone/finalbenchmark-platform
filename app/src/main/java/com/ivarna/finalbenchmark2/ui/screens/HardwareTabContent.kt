@@ -177,7 +177,7 @@ fun BatteryCard(batterySpecs: com.ivarna.finalbenchmark2.utils.BatterySpec?) {
                                                 com.ivarna.finalbenchmark2.domain.model.ItemValue
                                                         .Text(
                                                                 "Temperature",
-                                                                "${batterySpecs.temperature}°C"
+                                                                if (batterySpecs.temperature > 0) "${batterySpecs.temperature}°C" else "N/A"
                                                         ),
                                         isLastItem = false
                                 )

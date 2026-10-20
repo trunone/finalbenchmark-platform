@@ -394,7 +394,7 @@ private fun GpuLeftPanel(
                 GpuHUDMetric(
                     icon = Icons.Default.Thermostat,
                     label = "GPU TEMP",
-                    value = "${"%.0f".format(uiState.gpuTempC)}°C",
+                    value = if (uiState.gpuTempC > 0f) "${"%.0f".format(uiState.gpuTempC)}°C" else "--°C",
                     accentColor = tempColor(uiState.gpuTempC)
                 )
                 GpuHUDMetric(

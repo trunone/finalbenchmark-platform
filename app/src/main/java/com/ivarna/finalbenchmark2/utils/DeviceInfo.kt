@@ -317,9 +317,14 @@ class DeviceInfoCollector {
                 )
                 val temperature = batteryIntent?.getIntExtra("temperature", Int.MIN_VALUE)
                 val tempValue = temperature ?: Int.MIN_VALUE
-                return if (tempValue != Int.MIN_VALUE) tempValue / 10.0f else null
+                if (tempValue != Int.MIN_VALUE && tempValue > 0) {
+                    return tempValue / 10.0f
+                }
+                val fallback = TemperatureUtils(context).getBatteryTemperature()
+                return if (fallback > 0f) fallback else null
             } catch (e: Exception) {
-                return null
+                val fallback = TemperatureUtils(context).getBatteryTemperature()
+                return if (fallback > 0f) fallback else null
             }
         }
 
