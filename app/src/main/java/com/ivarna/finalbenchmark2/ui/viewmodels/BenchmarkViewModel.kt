@@ -429,6 +429,8 @@ class BenchmarkViewModel(
                                         summaryDeferred.cancel()
                                     }
 
+                                    benchmarkJob?.join()
+
                                     lastSummaryJson = summaryJson
                                     lastResults = try { parseResultsFromManagerJson(summaryJson) } catch (e: Exception) { null }
 

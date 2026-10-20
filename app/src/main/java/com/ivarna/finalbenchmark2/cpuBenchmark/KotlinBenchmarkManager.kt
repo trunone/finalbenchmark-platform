@@ -23,10 +23,10 @@ import android.graphics.Bitmap
 class KotlinBenchmarkManager(
     private val context: Context? = null
 ) {
-        private val _benchmarkEvents = MutableSharedFlow<BenchmarkEvent>(replay = 1)
+        private val _benchmarkEvents = MutableSharedFlow<BenchmarkEvent>(extraBufferCapacity = 64)
         val benchmarkEvents: SharedFlow<BenchmarkEvent> = _benchmarkEvents.asSharedFlow()
 
-        private val _benchmarkComplete = MutableSharedFlow<String>(replay = 1)
+        private val _benchmarkComplete = MutableSharedFlow<String>(extraBufferCapacity = 64)
         val benchmarkComplete: SharedFlow<String> = _benchmarkComplete.asSharedFlow()
 
         companion object {
