@@ -39,9 +39,9 @@ object RootAccessManager {
     /**
      * Returns Shizuku permission status. Performs a fast live check.
      */
-    suspend fun isShizukuGranted(): Boolean {
+    suspend fun isShizukuGranted(context: Context? = null): Boolean {
         val result = withContext(Dispatchers.IO) {
-            ShizukuUtils.hasShizukuPermission()
+            ShizukuUtils.hasShizukuPermission(context)
         }
         cachedShizukuState = result
         return result
@@ -55,7 +55,7 @@ object RootAccessManager {
         val rootEnabled = prefs?.getUseRootAccess() ?: true
         val shizukuEnabled = prefs?.getUseShizukuAccess() ?: true
 
-        val shizukuActive = if (shizukuEnabled) isShizukuGranted() else false
+        val shizukuActive = if (shizukuEnabled) isShizukuGranted(context) else false
         if (shizukuActive) return@coroutineScope true
 
         if (rootEnabled) {
@@ -69,13 +69,13 @@ object RootAccessManager {
     /**
      * Forces a re-check by clearing cache and performing new checks.
      */
-    suspend fun forceRefresh(): Boolean = coroutineScope {
+    suspend fun forceRefresh(context: Context? = null): Boolean = coroutineScope {
         mutex.withLock {
             cachedRootState = null
             cachedShizukuState = null
         }
 
-        val shizukuActive = isShizukuGranted()
+        val shizukuActive = isShizukuGranted(context)
         val rootDeferred = async(Dispatchers.IO) {
             mutex.withLock {
                 val result = withContext(Dispatchers.IO) {
@@ -93,21 +93,21 @@ object RootAccessManager {
         return cachedRootState
     }
 
-    fun getCachedShizukuAccess(): Boolean {
-        val live = ShizukuUtils.hasShizukuPermission()
+    fun getCachedShizukuAccess(context: Context? = null): Boolean {
+        val live = ShizukuUtils.hasShizukuPermission(context)
         cachedShizukuState = live
         return live
     }
 
-    fun getCachedElevatedAccess(): Boolean? {
-        val s = ShizukuUtils.hasShizukuPermission()
+    fun getCachedElevatedAccess(context: Context? = null): Boolean? {
+        val s = ShizukuUtils.hasShizukuPermission(context)
         if (s) return true
         val r = cachedRootState
         return r
     }
 
-    suspend fun hasRootAccess(): Boolean {
-        return isElevatedAccessGranted()
+    suspend fun hasRootAccess(context: Context? = null): Boolean {
+        return isElevatedAccessGranted(context)
     }
 
     fun reset() {

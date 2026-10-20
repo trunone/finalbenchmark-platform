@@ -50,8 +50,8 @@ fun RootCheckScreen(
     fun performAccessCheck() {
         scope.launch {
             rootUiState = RootUiState.Checking
-            val hasShizuku = RootAccessManager.isShizukuGranted()
-            val isShizukuAvailable = ShizukuUtils.isShizukuAvailable()
+            val hasShizuku = RootAccessManager.isShizukuGranted(context)
+            val isShizukuAvailable = ShizukuUtils.isShizukuAvailable(context)
             if (hasShizuku) {
                 rootUiState = RootUiState.Granted(isShizuku = true)
                 hasRootChecked.value = true
@@ -277,7 +277,7 @@ fun RootCheckScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(
                         onClick = {
-                            ShizukuUtils.requestShizukuPermission()
+                            ShizukuUtils.requestShizukuPermission(context = context)
                         },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
