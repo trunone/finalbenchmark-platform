@@ -82,8 +82,9 @@ fun SettingsScreen(
         val currentThemeMode = themePreferences.getThemeMode()
         var selectedThemeIndex by remember { mutableStateOf(getThemeIndex(currentThemeMode)) }
 
-        // Root / Shizuku access state
+        // Root and Shizuku separate access preferences
         var useRootAccess by remember { mutableStateOf(rootAccessPreferences.getUseRootAccess()) }
+        var useShizukuAccess by remember { mutableStateOf(rootAccessPreferences.getUseShizukuAccess()) }
 
         var isDeviceRooted by remember { mutableStateOf(false) }
         var isShizukuGranted by remember { mutableStateOf(false) }
@@ -99,18 +100,9 @@ fun SettingsScreen(
                 isShizukuGranted = shizukuGranted
                 isShizukuAvailable = shizukuAvailable
 
-                if (shizukuGranted) {
-                    rootAccessPreferences.setUseRootAccess(true)
-                    useRootAccess = true
-                    isAccessCheckLoading = false
-                }
-
                 val rootGranted = RootAccessManager.isRootGranted()
                 isDeviceRooted = rootGranted
-                if (rootGranted) {
-                    rootAccessPreferences.setUseRootAccess(true)
-                    useRootAccess = true
-                }
+
                 isAccessCheckLoading = false
             }
         }
@@ -200,12 +192,19 @@ fun SettingsScreen(
                 }
         }
 
-        // Handle root access toggle
-        val onRootAccessChange: (Boolean) -> Unit = remember(isShizukuAvailable, isShizukuGranted, isDeviceRooted) {
+        // Handle separate toggles
+        val onRootAccessChange: (Boolean) -> Unit = remember {
                 { enabled ->
                         useRootAccess = enabled
                         rootAccessPreferences.setUseRootAccess(enabled)
-                        if (enabled && isShizukuAvailable && !isShizukuGranted && !isDeviceRooted) {
+                }
+        }
+
+        val onShizukuAccessChange: (Boolean) -> Unit = remember(isShizukuAvailable, isShizukuGranted) {
+                { enabled ->
+                        useShizukuAccess = enabled
+                        rootAccessPreferences.setUseShizukuAccess(enabled)
+                        if (enabled && isShizukuAvailable && !isShizukuGranted) {
                                 com.ivarna.finalbenchmark2.utils.ShizukuUtils.requestShizukuPermission()
                         }
                 }
@@ -282,7 +281,7 @@ fun SettingsScreen(
                                 verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
 
-                                // Root & Shizuku Access Card
+                                // Root Access Card
                                 GlassSettingCard {
                                     Column(modifier = Modifier.padding(20.dp)) {
                                         Row(
@@ -292,23 +291,61 @@ fun SettingsScreen(
                                         ) {
                                             Column(modifier = Modifier.weight(1f)) {
                                                 Text(
-                                                    text = "Use Root / Shizuku Access",
+                                                    text = "Use Root Access",
+                                                    fontSize = 16.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+
+                                                Text(
+                                                    text = if (isDeviceRooted) "Root access available and working" else "No root access detected",
+                                                    fontSize = 13.sp,
+                                                    color = if (isDeviceRooted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                                                    modifier = Modifier.padding(top = 4.dp)
+                                                )
+                                            }
+
+                                            Switch(
+                                                checked = useRootAccess,
+                                                onCheckedChange = { onRootAccessChange(it) },
+                                                enabled = !isAccessCheckLoading && isDeviceRooted,
+                                                colors = SwitchDefaults.colors(
+                                                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                                    checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                                    uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                                                )
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // Shizuku Access Card
+                                GlassSettingCard(delayMillis = 50) {
+                                    Column(modifier = Modifier.padding(20.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = "Use Shizuku Access",
                                                     fontSize = 16.sp,
                                                     fontWeight = FontWeight.Bold,
                                                     color = MaterialTheme.colorScheme.onSurface
                                                 )
 
                                                 val statusText = when {
-                                                    isDeviceRooted -> "Root access available and working"
                                                     isShizukuGranted -> "Shizuku access available and working"
                                                     isShizukuAvailable -> "Shizuku service detected (Permission required)"
-                                                    else -> "No Root or Shizuku access detected"
+                                                    else -> "Shizuku service not running"
                                                 }
 
                                                 Text(
                                                     text = statusText,
                                                     fontSize = 13.sp,
-                                                    color = if (hasElevatedAccess)
+                                                    color = if (isShizukuGranted)
                                                         MaterialTheme.colorScheme.primary
                                                     else if (isShizukuAvailable)
                                                         MaterialTheme.colorScheme.secondary
@@ -319,9 +356,9 @@ fun SettingsScreen(
                                             }
 
                                             Switch(
-                                                checked = useRootAccess,
-                                                onCheckedChange = { onRootAccessChange(it) },
-                                                enabled = !isAccessCheckLoading && (hasElevatedAccess || isShizukuAvailable),
+                                                checked = useShizukuAccess,
+                                                onCheckedChange = { onShizukuAccessChange(it) },
+                                                enabled = !isAccessCheckLoading && (isShizukuGranted || isShizukuAvailable),
                                                 colors = SwitchDefaults.colors(
                                                     checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
                                                     checkedTrackColor = MaterialTheme.colorScheme.primary,
@@ -331,7 +368,7 @@ fun SettingsScreen(
                                             )
                                         }
 
-                                        if (isShizukuAvailable && !isShizukuGranted && !isDeviceRooted) {
+                                        if (isShizukuAvailable && !isShizukuGranted) {
                                             Spacer(modifier = Modifier.height(12.dp))
                                             Button(
                                                 onClick = {

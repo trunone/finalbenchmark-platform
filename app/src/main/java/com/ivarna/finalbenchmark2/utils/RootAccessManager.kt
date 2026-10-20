@@ -1,5 +1,6 @@
 package com.ivarna.finalbenchmark2.utils
 
+import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -47,15 +48,22 @@ object RootAccessManager {
     }
 
     /**
-     * Returns true if either Root or Shizuku access is granted.
-     * Checks Shizuku first and runs root check concurrently to prevent UI delays on non-rooted devices.
+     * Returns true if either Root or Shizuku access is granted and enabled in preferences.
      */
-    suspend fun isElevatedAccessGranted(): Boolean = coroutineScope {
-        val shizukuActive = isShizukuGranted()
+    suspend fun isElevatedAccessGranted(context: Context? = null): Boolean = coroutineScope {
+        val prefs = context?.let { RootAccessPreferences(it) }
+        val rootEnabled = prefs?.getUseRootAccess() ?: true
+        val shizukuEnabled = prefs?.getUseShizukuAccess() ?: true
+
+        val shizukuActive = if (shizukuEnabled) isShizukuGranted() else false
         if (shizukuActive) return@coroutineScope true
 
-        val rootDeferred = async(Dispatchers.IO) { isRootGranted() }
-        rootDeferred.await()
+        if (rootEnabled) {
+            val rootDeferred = async(Dispatchers.IO) { isRootGranted() }
+            rootDeferred.await()
+        } else {
+            false
+        }
     }
 
     /**
@@ -98,16 +106,10 @@ object RootAccessManager {
         return r
     }
 
-    /**
-     * Returns true if elevated access (Root or Shizuku) is available.
-     */
     suspend fun hasRootAccess(): Boolean {
         return isElevatedAccessGranted()
     }
 
-    /**
-     * Resets cached states
-     */
     fun reset() {
         cachedRootState = null
         cachedShizukuState = null
