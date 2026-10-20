@@ -89,14 +89,26 @@ fun RootCheckScreen(
     }
 
     DisposableEffect(Unit) {
-        val listener = Shizuku.OnRequestPermissionResultListener { _, grantResult ->
+        val permissionListener = Shizuku.OnRequestPermissionResultListener { _, grantResult ->
             if (grantResult == android.content.pm.PackageManager.PERMISSION_GRANTED) {
                 performAccessCheck()
             }
         }
-        ShizukuUtils.addPermissionListener(listener)
+        val binderReceivedListener = Shizuku.OnBinderReceivedListener {
+            performAccessCheck()
+        }
+        val binderDeadListener = Shizuku.OnBinderDeadListener {
+            performAccessCheck()
+        }
+
+        ShizukuUtils.addPermissionListener(permissionListener)
+        ShizukuUtils.addBinderReceivedListener(binderReceivedListener)
+        ShizukuUtils.addBinderDeadListener(binderDeadListener)
+
         onDispose {
-            ShizukuUtils.removePermissionListener(listener)
+            ShizukuUtils.removePermissionListener(permissionListener)
+            ShizukuUtils.removeBinderReceivedListener(binderReceivedListener)
+            ShizukuUtils.removeBinderDeadListener(binderDeadListener)
         }
     }
 

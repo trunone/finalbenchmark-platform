@@ -78,9 +78,7 @@ object ShizukuUtils {
 
     fun addPermissionListener(listener: Shizuku.OnRequestPermissionResultListener) {
         try {
-            if (isShizukuAvailable()) {
-                Shizuku.addRequestPermissionResultListener(listener)
-            }
+            Shizuku.addRequestPermissionResultListener(listener)
         } catch (e: Throwable) {
             Log.e(TAG, "Error adding permission listener", e)
         }
@@ -91,6 +89,38 @@ object ShizukuUtils {
             Shizuku.removeRequestPermissionResultListener(listener)
         } catch (e: Throwable) {
             Log.e(TAG, "Error removing permission listener", e)
+        }
+    }
+
+    fun addBinderReceivedListener(listener: Shizuku.OnBinderReceivedListener) {
+        try {
+            Shizuku.addBinderReceivedListenerSticky(listener)
+        } catch (e: Throwable) {
+            Log.e(TAG, "Error adding binder received listener", e)
+        }
+    }
+
+    fun removeBinderReceivedListener(listener: Shizuku.OnBinderReceivedListener) {
+        try {
+            Shizuku.removeBinderReceivedListener(listener)
+        } catch (e: Throwable) {
+            Log.e(TAG, "Error removing binder received listener", e)
+        }
+    }
+
+    fun addBinderDeadListener(listener: Shizuku.OnBinderDeadListener) {
+        try {
+            Shizuku.addBinderDeadListener(listener)
+        } catch (e: Throwable) {
+            Log.e(TAG, "Error adding binder dead listener", e)
+        }
+    }
+
+    fun removeBinderDeadListener(listener: Shizuku.OnBinderDeadListener) {
+        try {
+            Shizuku.removeBinderDeadListener(listener)
+        } catch (e: Throwable) {
+            Log.e(TAG, "Error removing binder dead listener", e)
         }
     }
 

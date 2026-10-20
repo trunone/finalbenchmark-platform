@@ -124,14 +124,26 @@ fun SettingsScreen(
         }
 
         DisposableEffect(Unit) {
-            val listener = Shizuku.OnRequestPermissionResultListener { _, grantResult ->
+            val permissionListener = Shizuku.OnRequestPermissionResultListener { _, grantResult ->
                 if (grantResult == android.content.pm.PackageManager.PERMISSION_GRANTED) {
                     refreshAccessStatus()
                 }
             }
-            com.ivarna.finalbenchmark2.utils.ShizukuUtils.addPermissionListener(listener)
+            val binderReceivedListener = Shizuku.OnBinderReceivedListener {
+                refreshAccessStatus()
+            }
+            val binderDeadListener = Shizuku.OnBinderDeadListener {
+                refreshAccessStatus()
+            }
+
+            com.ivarna.finalbenchmark2.utils.ShizukuUtils.addPermissionListener(permissionListener)
+            com.ivarna.finalbenchmark2.utils.ShizukuUtils.addBinderReceivedListener(binderReceivedListener)
+            com.ivarna.finalbenchmark2.utils.ShizukuUtils.addBinderDeadListener(binderDeadListener)
+
             onDispose {
-                com.ivarna.finalbenchmark2.utils.ShizukuUtils.removePermissionListener(listener)
+                com.ivarna.finalbenchmark2.utils.ShizukuUtils.removePermissionListener(permissionListener)
+                com.ivarna.finalbenchmark2.utils.ShizukuUtils.removeBinderReceivedListener(binderReceivedListener)
+                com.ivarna.finalbenchmark2.utils.ShizukuUtils.removeBinderDeadListener(binderDeadListener)
             }
         }
 

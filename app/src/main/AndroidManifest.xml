@@ -73,6 +73,19 @@
             android:exported="false"
             android:process=":crash"
             android:theme="@style/Theme.FinalBenchmark2" />
+
+        <!-- Shizuku Provider for receiving Shizuku binder -->
+        <provider
+            android:name="rikka.shizuku.provider.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:multiprocess="false"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
+
+        <meta-data
+            android:name="moe.shizuku.client.V3_SUPPORT"
+            android:value="true" />
     </application>
 
 </manifest>
