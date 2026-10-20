@@ -11,6 +11,6 @@ class RootAccessPreferences(private val context: Context) {
     }
     
     fun getUseRootAccess(): Boolean {
-        return sharedPreferences.getBoolean(USE_ROOT_KEY, false) // Default to false
+        return sharedPreferences.getBoolean(USE_ROOT_KEY, true) // Default to true so granted permissions are active
     }
 }

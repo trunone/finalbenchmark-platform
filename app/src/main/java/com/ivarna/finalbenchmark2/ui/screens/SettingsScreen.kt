@@ -30,6 +30,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import rikka.shizuku.Shizuku
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -86,11 +90,57 @@ fun SettingsScreen(
         var isShizukuAvailable by remember { mutableStateOf(false) }
         var isAccessCheckLoading by remember { mutableStateOf(true) }
 
-        LaunchedEffect(Unit) {
-                isDeviceRooted = RootAccessManager.isRootGranted()
-                isShizukuGranted = RootAccessManager.isShizukuGranted()
-                isShizukuAvailable = com.ivarna.finalbenchmark2.utils.ShizukuUtils.isShizukuAvailable()
+        val lifecycleOwner = LocalLifecycleOwner.current
+
+        fun refreshAccessStatus() {
+            scope.launch {
+                val shizukuGranted = RootAccessManager.isShizukuGranted()
+                val shizukuAvailable = com.ivarna.finalbenchmark2.utils.ShizukuUtils.isShizukuAvailable()
+                isShizukuGranted = shizukuGranted
+                isShizukuAvailable = shizukuAvailable
+
+                if (shizukuGranted) {
+                    rootAccessPreferences.setUseRootAccess(true)
+                    useRootAccess = true
+                    isAccessCheckLoading = false
+                }
+
+                val rootGranted = RootAccessManager.isRootGranted()
+                isDeviceRooted = rootGranted
+                if (rootGranted) {
+                    rootAccessPreferences.setUseRootAccess(true)
+                    useRootAccess = true
+                }
                 isAccessCheckLoading = false
+            }
+        }
+
+        LaunchedEffect(Unit) {
+            refreshAccessStatus()
+        }
+
+        DisposableEffect(lifecycleOwner) {
+            val observer = LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    refreshAccessStatus()
+                }
+            }
+            lifecycleOwner.lifecycle.addObserver(observer)
+            onDispose {
+                lifecycleOwner.lifecycle.removeObserver(observer)
+            }
+        }
+
+        DisposableEffect(Unit) {
+            val listener = Shizuku.OnRequestPermissionResultListener { _, grantResult ->
+                if (grantResult == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    refreshAccessStatus()
+                }
+            }
+            com.ivarna.finalbenchmark2.utils.ShizukuUtils.addPermissionListener(listener)
+            onDispose {
+                com.ivarna.finalbenchmark2.utils.ShizukuUtils.removePermissionListener(listener)
+            }
         }
 
         val hasElevatedAccess = isDeviceRooted || isShizukuGranted
@@ -151,10 +201,13 @@ fun SettingsScreen(
         }
 
         // Handle root access toggle
-        val onRootAccessChange: (Boolean) -> Unit = remember {
+        val onRootAccessChange: (Boolean) -> Unit = remember(isShizukuAvailable, isShizukuGranted, isDeviceRooted) {
                 { enabled ->
                         useRootAccess = enabled
                         rootAccessPreferences.setUseRootAccess(enabled)
+                        if (enabled && isShizukuAvailable && !isShizukuGranted && !isDeviceRooted) {
+                                com.ivarna.finalbenchmark2.utils.ShizukuUtils.requestShizukuPermission()
+                        }
                 }
         }
 
@@ -283,12 +336,6 @@ fun SettingsScreen(
                                             Button(
                                                 onClick = {
                                                     com.ivarna.finalbenchmark2.utils.ShizukuUtils.requestShizukuPermission()
-                                                    scope.launch {
-                                                        delay(1000)
-                                                        RootAccessManager.forceRefresh()
-                                                        isDeviceRooted = RootAccessManager.isRootGranted()
-                                                        isShizukuGranted = RootAccessManager.isShizukuGranted()
-                                                    }
                                                 },
                                                 modifier = Modifier.fillMaxWidth(),
                                                 shape = RoundedCornerShape(10.dp),

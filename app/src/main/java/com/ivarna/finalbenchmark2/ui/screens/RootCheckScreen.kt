@@ -13,6 +13,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import rikka.shizuku.Shizuku
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.ivarna.finalbenchmark2.ui.components.GlassCard
@@ -46,13 +50,17 @@ fun RootCheckScreen(
     fun performAccessCheck() {
         scope.launch {
             rootUiState = RootUiState.Checking
-            val hasRoot = RootAccessManager.isRootGranted()
             val hasShizuku = RootAccessManager.isShizukuGranted()
             val isShizukuAvailable = ShizukuUtils.isShizukuAvailable()
+            if (hasShizuku) {
+                rootUiState = RootUiState.Granted(isShizuku = true)
+                hasRootChecked.value = true
+                return@launch
+            }
 
+            val hasRoot = RootAccessManager.isRootGranted()
             rootUiState = when {
                 hasRoot -> RootUiState.Granted(isShizuku = false)
-                hasShizuku -> RootUiState.Granted(isShizuku = true)
                 isShizukuAvailable -> RootUiState.ShizukuAvailable(permissionGranted = false)
                 else -> RootUiState.NotAvailable
             }
@@ -60,9 +68,35 @@ fun RootCheckScreen(
         }
     }
 
+    val lifecycleOwner = LocalLifecycleOwner.current
+
     LaunchedEffect(Unit) {
         if (!hasRootChecked.value) {
             performAccessCheck()
+        }
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                performAccessCheck()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    DisposableEffect(Unit) {
+        val listener = Shizuku.OnRequestPermissionResultListener { _, grantResult ->
+            if (grantResult == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                performAccessCheck()
+            }
+        }
+        ShizukuUtils.addPermissionListener(listener)
+        onDispose {
+            ShizukuUtils.removePermissionListener(listener)
         }
     }
 
@@ -232,11 +266,6 @@ fun RootCheckScreen(
                     Button(
                         onClick = {
                             ShizukuUtils.requestShizukuPermission()
-                            scope.launch {
-                                delay(1000)
-                                RootAccessManager.forceRefresh()
-                                performAccessCheck()
-                            }
                         },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),

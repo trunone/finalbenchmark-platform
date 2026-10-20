@@ -1,13 +1,14 @@
 package com.ivarna.finalbenchmark2.utils
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
  * Singleton class to manage root and Shizuku access state across the application
- * This prevents repeated checks and improves performance by caching results
  */
 object RootAccessManager {
     private var cachedRootState: Boolean? = null
@@ -35,67 +36,66 @@ object RootAccessManager {
     }
 
     /**
-     * Returns cached Shizuku status if available, otherwise performs check.
+     * Returns Shizuku permission status. Performs a fast live check.
      */
     suspend fun isShizukuGranted(): Boolean {
-        val cachedValue = cachedShizukuState
-        if (cachedValue != null) {
-            return cachedValue
+        val result = withContext(Dispatchers.IO) {
+            ShizukuUtils.hasShizukuPermission()
         }
-
-        return mutex.withLock {
-            if (cachedShizukuState == null) {
-                val result = withContext(Dispatchers.IO) {
-                    ShizukuUtils.hasShizukuPermission()
-                }
-                cachedShizukuState = result
-            }
-            cachedShizukuState!!
-        }
+        cachedShizukuState = result
+        return result
     }
 
     /**
      * Returns true if either Root or Shizuku access is granted.
+     * Checks Shizuku first and runs root check concurrently to prevent UI delays on non-rooted devices.
      */
-    suspend fun isElevatedAccessGranted(): Boolean {
-        return isRootGranted() || isShizukuGranted()
+    suspend fun isElevatedAccessGranted(): Boolean = coroutineScope {
+        val shizukuActive = isShizukuGranted()
+        if (shizukuActive) return@coroutineScope true
+
+        val rootDeferred = async(Dispatchers.IO) { isRootGranted() }
+        rootDeferred.await()
     }
 
     /**
      * Forces a re-check by clearing cache and performing new checks.
      */
-    suspend fun forceRefresh(): Boolean {
-        return mutex.withLock {
+    suspend fun forceRefresh(): Boolean = coroutineScope {
+        mutex.withLock {
             cachedRootState = null
             cachedShizukuState = null
-
-            val rootResult = withContext(Dispatchers.IO) {
-                RootUtils.canExecuteRootCommandRobust()
-            }
-            val shizukuResult = withContext(Dispatchers.IO) {
-                ShizukuUtils.hasShizukuPermission()
-            }
-
-            cachedRootState = rootResult
-            cachedShizukuState = shizukuResult
-
-            rootResult || shizukuResult
         }
+
+        val shizukuActive = isShizukuGranted()
+        val rootDeferred = async(Dispatchers.IO) {
+            mutex.withLock {
+                val result = withContext(Dispatchers.IO) {
+                    RootUtils.canExecuteRootCommandRobust()
+                }
+                cachedRootState = result
+                result
+            }
+        }
+
+        shizukuActive || rootDeferred.await()
     }
 
     fun getCachedRootAccess(): Boolean? {
         return cachedRootState
     }
 
-    fun getCachedShizukuAccess(): Boolean? {
-        return cachedShizukuState
+    fun getCachedShizukuAccess(): Boolean {
+        val live = ShizukuUtils.hasShizukuPermission()
+        cachedShizukuState = live
+        return live
     }
 
     fun getCachedElevatedAccess(): Boolean? {
+        val s = ShizukuUtils.hasShizukuPermission()
+        if (s) return true
         val r = cachedRootState
-        val s = cachedShizukuState
-        if (r == null && s == null) return null
-        return (r == true) || (s == true)
+        return r
     }
 
     /**

@@ -65,14 +65,32 @@ object ShizukuUtils {
      */
     fun requestShizukuPermission(requestCode: Int = SHIZUKU_PERMISSION_REQUEST_CODE) {
         try {
-            if (isShizukuAvailable() && !hasShizukuPermission()) {
+            if (isShizukuAvailable()) {
                 Log.d(TAG, "Requesting Shizuku permission with code $requestCode")
                 Shizuku.requestPermission(requestCode)
             } else {
-                Log.d(TAG, "Shizuku not available or permission already granted")
+                Log.d(TAG, "Shizuku service not available")
             }
         } catch (e: Throwable) {
             Log.e(TAG, "Error requesting Shizuku permission: ${e.message}", e)
+        }
+    }
+
+    fun addPermissionListener(listener: Shizuku.OnRequestPermissionResultListener) {
+        try {
+            if (isShizukuAvailable()) {
+                Shizuku.addRequestPermissionResultListener(listener)
+            }
+        } catch (e: Throwable) {
+            Log.e(TAG, "Error adding permission listener", e)
+        }
+    }
+
+    fun removePermissionListener(listener: Shizuku.OnRequestPermissionResultListener) {
+        try {
+            Shizuku.removeRequestPermissionResultListener(listener)
+        } catch (e: Throwable) {
+            Log.e(TAG, "Error removing permission listener", e)
         }
     }
 
