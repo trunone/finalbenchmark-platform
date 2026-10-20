@@ -71,8 +71,8 @@ class PerformanceMonitor(private val context: Context) {
                             cpuUsage.add(cpu)
                             cpuUsageTimestamps.add(timestamp)
 
-                            // Collect CPU temperature
-                            val cpuTemp = temperatureUtils.getCpuTemperature()
+                            // Collect CPU temperature (or battery temp fallback if CPU temp unreadable)
+                            val cpuTemp = temperatureUtils.getCpuOrBatteryTemperature().temperature
                             cpuTemperature.add(cpuTemp)
                             cpuTempTimestamps.add(timestamp)
 

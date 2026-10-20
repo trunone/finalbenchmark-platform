@@ -177,6 +177,7 @@ class BenchmarkViewModel(
                                                         0f
                                                 }
 
+                                        val tempResult = tempUtils.getCpuOrBatteryTemperature()
                                         val stats =
                                                 SystemStats(
                                                         cpuLoad =
@@ -184,7 +185,8 @@ class BenchmarkViewModel(
                                                         power =
                                                                 powerUtils.getPowerConsumptionInfo()
                                                                         .power,
-                                                        temp = tempUtils.getCpuTemperature(),
+                                                        temp = tempResult.temperature,
+                                                        isBatteryTemp = tempResult.isBattery,
                                                         memoryLoad = memoryLoad
                                                 )
 

@@ -10,6 +10,7 @@ import com.ivarna.finalbenchmark2.data.database.entities.GenericTestDetailEntity
 import com.ivarna.finalbenchmark2.data.repository.HistoryRepository
 import com.ivarna.finalbenchmark2.utils.PerformanceMonitor
 import com.ivarna.finalbenchmark2.utils.RamNativeBridge
+import com.ivarna.finalbenchmark2.utils.TemperatureUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -55,6 +56,7 @@ data class RamBenchmarkUiState(
     val currentUnit: String = "MB/s",
     val memUsageMB: Int = 0,
     val cpuTempC: Float = 0f,
+    val isBatteryTemp: Boolean = false,
     val completedTests: List<RamTestResult> = emptyList(),
     val totalScore: Int = 0,
     val presetName: String = ""
@@ -147,7 +149,17 @@ class RamBenchmarkViewModel(
 
     private var runJob: Job? = null
     private val performanceMonitor = PerformanceMonitor(application)
+    private val tempUtils = TemperatureUtils(application)
     private val baseCpuTemp = (38..45).random().toFloat()
+
+    private fun getTemp(): Pair<Float, Boolean> {
+        val res = tempUtils.getCpuOrBatteryTemperature()
+        return if (res.temperature > 0f) {
+            Pair(res.temperature, res.isBattery)
+        } else {
+            Pair(mockCpuTemp(), false)
+        }
+    }
     private val nativeAvailable: Boolean
 
     init {
@@ -195,10 +207,12 @@ class RamBenchmarkViewModel(
                 val warmSteps = (WARMUP_DUR_MS / TICK_MS).toInt()
                 repeat(warmSteps) { step ->
                     delay(TICK_MS)
+                    val (temp, isBat) = getTemp()
                     _uiState.update { s ->
                         s.copy(
                             currentTestProgress = (step + 1).toFloat() / warmSteps * 0.15f,
-                            cpuTempC = mockCpuTemp(),
+                            cpuTempC = temp,
+                            isBatteryTemp = isBat,
                             memUsageMB = mockMemUsage()
                         )
                     }
@@ -214,11 +228,13 @@ class RamBenchmarkViewModel(
                 repeat(measureSteps) { step ->
                     delay(TICK_MS)
                     val overall = (index + 0.15f + (step + 1).toFloat() / measureSteps * 0.85f) / RAM_TESTS.size
+                    val (temp, isBat) = getTemp()
                     _uiState.update { s ->
                         s.copy(
                             currentTestProgress = 0.15f + (step + 1).toFloat() / measureSteps * 0.85f,
                             overallProgress = overall,
-                            cpuTempC = mockCpuTemp(),
+                            cpuTempC = temp,
+                            isBatteryTemp = isBat,
                             memUsageMB = mockMemUsage()
                         )
                     }

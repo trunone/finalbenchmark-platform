@@ -45,6 +45,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Pending
+import androidx.compose.material.icons.rounded.BatteryStd
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material.icons.outlined.Timer
@@ -116,6 +117,7 @@ private data class StorTestState(
 private data class StorageStats(
     val cpuLoad: Int,
     val temp: Float,
+    val isBatteryTemp: Boolean = false,
     val freeSpace: Double,
     val tint: Color
 )
@@ -261,10 +263,11 @@ fun StorageBenchmarkScreen(
         if (state.isRunning) (75..95).random() else (4..10).random()
     }
 
-    val storageStats = remember(cpuLoadVal, state.cpuTempC, state.storageFreeGB, currentScore, tint) {
+    val storageStats = remember(cpuLoadVal, state.cpuTempC, state.isBatteryTemp, state.storageFreeGB, currentScore, tint) {
         StorageStats(
             cpuLoad = cpuLoadVal,
             temp = state.cpuTempC,
+            isBatteryTemp = state.isBatteryTemp,
             freeSpace = state.storageFreeGB,
             tint = tint
         )
@@ -784,8 +787,8 @@ private fun StorHUDMonitor(
             )
 
             StorHUDMetric(
-                icon = Icons.Default.Thermostat,
-                label = "CPU TEMP",
+                icon = if (stats.isBatteryTemp) Icons.Rounded.BatteryStd else Icons.Default.Thermostat,
+                label = if (stats.isBatteryTemp) "BAT TEMP" else "CPU TEMP",
                 value = if (stats.temp > 0) String.format("%.1f°C", stats.temp) else "--°C",
                 accentColor = Color(0xFFFF7043)
             )

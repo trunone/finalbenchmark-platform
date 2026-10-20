@@ -45,6 +45,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Pending
+import androidx.compose.material.icons.rounded.BatteryStd
 import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.Divider
@@ -114,6 +115,7 @@ private data class RamLocalTestState(
 private data class RamStats(
     val cpuLoad: Int,
     val temp: Float,
+    val isBatteryTemp: Boolean = false,
     val memUsageMB: Int,
     val tint: Color
 )
@@ -258,10 +260,11 @@ fun RamBenchmarkScreen(
         if (state.isRunning) (75..95).random() else (4..10).random()
     }
 
-    val ramStatsVal = remember(cpuLoadVal, state.cpuTempC, state.memUsageMB, currentScore, tint) {
+    val ramStatsVal = remember(cpuLoadVal, state.cpuTempC, state.isBatteryTemp, state.memUsageMB, currentScore, tint) {
         RamStats(
             cpuLoad = cpuLoadVal,
             temp = state.cpuTempC,
+            isBatteryTemp = state.isBatteryTemp,
             memUsageMB = state.memUsageMB,
             tint = tint
         )
@@ -781,8 +784,8 @@ private fun RamHUDMonitor(
             )
 
             RamHUDMetric(
-                icon = Icons.Default.Thermostat,
-                label = "CPU TEMP",
+                icon = if (stats.isBatteryTemp) Icons.Rounded.BatteryStd else Icons.Default.Thermostat,
+                label = if (stats.isBatteryTemp) "BAT TEMP" else "CPU TEMP",
                 value = if (stats.temp > 0) String.format("%.1f°C", stats.temp) else "--°C",
                 accentColor = Color(0xFFFF7043)
             )

@@ -31,4 +31,37 @@ class TemperatureUtilsTest {
         assertNull(TemperatureUtils.parseTemperature(0f))
         assertNull(TemperatureUtils.parseTemperature(200000f))
     }
+
+    @Test
+    fun testGetCpuOrBatteryTemperatureCpuAvailable() {
+        val testUtils = object : TemperatureUtils() {
+            override fun getCpuTemperature(): Float = 55.0f
+            override fun getBatteryTemperature(): Float = 32.0f
+        }
+        val result = testUtils.getCpuOrBatteryTemperature()
+        assertEquals(55.0f, result.temperature, 0.01f)
+        assertEquals(false, result.isBattery)
+    }
+
+    @Test
+    fun testGetCpuOrBatteryTemperatureCpuUnavailableBatteryAvailable() {
+        val testUtils = object : TemperatureUtils() {
+            override fun getCpuTemperature(): Float = -1f
+            override fun getBatteryTemperature(): Float = 34.0f
+        }
+        val result = testUtils.getCpuOrBatteryTemperature()
+        assertEquals(34.0f, result.temperature, 0.01f)
+        assertEquals(true, result.isBattery)
+    }
+
+    @Test
+    fun testGetCpuOrBatteryTemperatureBothUnavailable() {
+        val testUtils = object : TemperatureUtils() {
+            override fun getCpuTemperature(): Float = -1f
+            override fun getBatteryTemperature(): Float = -1f
+        }
+        val result = testUtils.getCpuOrBatteryTemperature()
+        assertEquals(-1f, result.temperature, 0.01f)
+        assertEquals(false, result.isBattery)
+    }
 }

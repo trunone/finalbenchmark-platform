@@ -37,6 +37,7 @@ import com.ivarna.finalbenchmark2.data.database.entities.BenchmarkResultEntity
 import com.ivarna.finalbenchmark2.data.database.entities.GenericTestDetailEntity
 import com.ivarna.finalbenchmark2.data.repository.HistoryRepository
 import com.ivarna.finalbenchmark2.utils.PerformanceMonitor
+import com.ivarna.finalbenchmark2.utils.TemperatureUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -94,6 +95,7 @@ data class ProductivityBenchmarkUiState(
     val currentUnit: String = "ops/s",
     val currentOperationDetail: String = "",  // what's being processed live
     val cpuTempC: Float = 35f,
+    val isBatteryTemp: Boolean = false,
     val completedTests: List<ProductivityTestResult> = emptyList(),
     val totalScore: Int = 0,
     val presetName: String = "",
@@ -199,7 +201,17 @@ class ProductivityBenchmarkViewModel(
 
     private var runJob: Job? = null
     private val performanceMonitor = PerformanceMonitor(application)
+    private val tempUtils = TemperatureUtils(application)
     private val baseCpuTemp = (36..44).random().toFloat()
+
+    private fun getTemp(): Pair<Float, Boolean> {
+        val res = tempUtils.getCpuOrBatteryTemperature()
+        return if (res.temperature > 0f) {
+            Pair(res.temperature, res.isBattery)
+        } else {
+            Pair(mockCpuTemp(), false)
+        }
+    }
 
     // Written from Dispatchers.IO benchmark functions; read from main tick coroutine
     @Volatile private var liveDetail = ""
@@ -255,10 +267,12 @@ class ProductivityBenchmarkViewModel(
                 repeat(warmSteps) { step ->
                     delay(PROD_TICK_MS)
                     if (warmupJob.isCompleted) return@repeat
+                    val (temp, isBat) = getTemp()
                     _uiState.update { s ->
                         s.copy(
                             currentTestProgress = (step + 1).toFloat() / warmSteps * 0.15f,
-                            cpuTempC = mockCpuTemp(),
+                            cpuTempC = temp,
+                            isBatteryTemp = isBat,
                             currentOperationDetail = liveDetail
                         )
                     }
@@ -284,11 +298,13 @@ class ProductivityBenchmarkViewModel(
                     delay(PROD_TICK_MS)
                     val overall = (index + 0.15f + (step + 1).toFloat() / measureSteps * 0.85f) /
                                   PRODUCTIVITY_TESTS.size
+                    val (temp, isBat) = getTemp()
                     _uiState.update { s ->
                         s.copy(
                             currentTestProgress = 0.15f + (step + 1).toFloat() / measureSteps * 0.85f,
                             overallProgress = overall,
-                            cpuTempC = mockCpuTemp(),
+                            cpuTempC = temp,
+                            isBatteryTemp = isBat,
                             currentOperationDetail = liveDetail
                         )
                     }
