@@ -23,6 +23,9 @@
     <!-- NEW: Post notifications (required for foreground service on Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Shizuku Permission -->
+    <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
+
     <application
         android:name=".FinalBenchmark2Application"
         android:allowBackup="true"
@@ -73,6 +76,18 @@
             android:exported="false"
             android:process=":crash"
             android:theme="@style/Theme.FinalBenchmark2" />
+
+        <!-- Shizuku Provider -->
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:multiprocess="false"
+            android:enabled="true"
+            android:exported="true" />
+
+        <meta-data
+            android:name="moe.shizuku.client.V3_SUPPORT"
+            android:value="true" />
     </application>
 
 </manifest>

@@ -1,20 +1,23 @@
 package com.ivarna.finalbenchmark2.ui.viewmodels
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ivarna.finalbenchmark2.utils.RootAccessManager
+import com.ivarna.finalbenchmark2.utils.RootAccessPreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-// Enum to represent different root states
+// Enum to represent different root and elevated access states
 enum class RootStatus {
-    NO_ROOT,           // Device is not rooted
+    NO_ROOT,           // Device is not rooted and Shizuku not active
     ROOT_AVAILABLE,    // Device is rooted but commands don't work
-    ROOT_WORKING       // Device is rooted and commands work
+    ROOT_WORKING,      // Device is rooted and commands work
+    SHIZUKU_WORKING    // Shizuku permission granted and working
 }
 
 // Enum to represent performance optimization states
@@ -48,16 +51,22 @@ class MainViewModel : ViewModel() {
         checkRootAccess()
     }
 
-    private fun checkRootAccess() {
+    fun checkRootAccess(context: Context? = null) {
         viewModelScope.launch(Dispatchers.IO) {
-            // Use RootAccessManager for proper caching - this prevents repeated heavy checks
-            val hasRootAccess = RootAccessManager.isRootGranted()
-            
-            // For simplicity, we'll treat all root access as ROOT_WORKING 
-            // since RootAccessManager already verifies that commands can execute
-            val result = if (hasRootAccess) RootStatus.ROOT_WORKING else RootStatus.NO_ROOT
-            
-            Log.d("MainViewModel", "Root access result via RootAccessManager: $result")
+            val rootGranted = RootAccessManager.isRootGranted()
+            val shizukuGranted = RootAccessManager.isShizukuGranted()
+
+            val prefs = context?.let { RootAccessPreferences(it) }
+            val useRoot = prefs?.getUseRootAccess() ?: true
+            val useShizuku = prefs?.getUseShizukuAccess() ?: true
+
+            val result = when {
+                useRoot && rootGranted -> RootStatus.ROOT_WORKING
+                useShizuku && shizukuGranted -> RootStatus.SHIZUKU_WORKING
+                else -> RootStatus.NO_ROOT
+            }
+
+            Log.d("MainViewModel", "Elevated access result via RootAccessManager: $result")
             _rootState.value = result
         }
     }

@@ -12,7 +12,10 @@ import android.util.Log
 import android.view.Window
 import android.view.WindowManager
 import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import androidx.lifecycle.lifecycleScope
 import com.ivarna.finalbenchmark2.utils.RootUtils
 import com.ivarna.finalbenchmark2.utils.RootCommandExecutor
 import androidx.activity.ComponentActivity
@@ -829,9 +832,10 @@ class MainActivity : ComponentActivity() {
      */
     private fun applyGovernorHints() {
         Log.i(TAG, "Checking CPU Governor status...")
-        
-        // Just check current governor and update status
-        updateGovernorStatus()
+        lifecycleScope.launch(Dispatchers.IO) {
+            trySetGovernorWithRoot()
+            updateGovernorStatus()
+        }
     }
     
     /**
@@ -1012,17 +1016,11 @@ class MainActivity : ComponentActivity() {
      */
     private fun checkRootAccess(): Boolean {
         return try {
-            // Use RootAccessManager for proper caching and consistency
-            // Note: This is a suspend function, but we're calling it synchronously here
-            // In practice, this should be called from a coroutine context
-            Log.i(TAG, "Root check: using RootAccessManager")
-            
-            // Since this method is called from non-suspend contexts in MainActivity,
-            // we'll use a simple approach that doesn't block the main thread
-            val cachedResult = com.ivarna.finalbenchmark2.utils.RootAccessManager.getCachedRootAccess()
+            Log.i(TAG, "Elevated access check: using RootAccessManager")
+            val cachedResult = com.ivarna.finalbenchmark2.utils.RootAccessManager.getCachedElevatedAccess()
             cachedResult ?: false
         } catch (e: Exception) {
-            Log.e(TAG, "Error checking root access", e)
+            Log.e(TAG, "Error checking elevated access", e)
             false
         }
     }
@@ -1030,26 +1028,20 @@ class MainActivity : ComponentActivity() {
     /**
      * Try to set governor using root access
      */
-    private fun trySetGovernorWithRoot(): Boolean {
+    private suspend fun trySetGovernorWithRoot(): Boolean {
         return try {
             val numCores = Runtime.getRuntime().availableProcessors()
-            var command = StringBuilder()
+            val command = StringBuilder()
             
             for (cpu in 0 until numCores) {
                 command.append("echo performance > /sys/devices/system/cpu/cpu$cpu/cpufreq/scaling_governor; ")
             }
             
-            // Use RootCommandExecutor to execute with proper root access
-            val rootExecutor = RootCommandExecutor()
-            
-            // Execute the command synchronously (this is a main thread call, but it's quick)
-            val result = runBlocking {
-                rootExecutor.executeCommand(command.toString())
-            }
+            val rootExecutor = RootCommandExecutor(this)
+            val result = rootExecutor.executeCommand(command.toString())
             
             if (result != null) {
-                Log.i(TAG, "Root governor command executed successfully")
-                // Verify the governor was actually changed
+                Log.i(TAG, "Governor command executed successfully")
                 val currentGovernor = getCurrentGovernor()
                 if (currentGovernor == "performance") {
                     Log.i(TAG, "✓ Governor successfully set to performance mode")
@@ -1059,11 +1051,11 @@ class MainActivity : ComponentActivity() {
                     false
                 }
             } else {
-                Log.w(TAG, "Root governor command failed to execute")
+                Log.w(TAG, "Governor command failed to execute")
                 false
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error executing root governor command", e)
+        } catch (e: Throwable) {
+            Log.e(TAG, "Error executing governor command", e)
             false
         }
     }

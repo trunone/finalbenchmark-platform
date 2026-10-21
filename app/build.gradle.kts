@@ -29,6 +29,10 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
+        testOptions {
+            unitTests.isReturnDefaultValues = true
+        }
+
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
 
         // C++ Optimization Flags for maximum performance
@@ -144,6 +148,8 @@ dependencies {
             "androidx.compose.material:material-icons-extended:1.7.5"
     ) // Add icons extended directly
     implementation("com.github.topjohnwu.libsu:core:6.0.0")
+    implementation("dev.rikka.shizuku:api:13.1.5")
+    implementation("dev.rikka.shizuku:provider:13.1.5")
     implementation("com.google.code.gson:gson:2.10.1")
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
