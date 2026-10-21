@@ -142,90 +142,20 @@ fun MainNavigation(
                     )
                 }
 
-                // Unified Transitions - Optimized Slide
-                val commonSpec = androidx.compose.animation.core.tween<androidx.compose.ui.unit.IntOffset>(
-                    durationMillis = 350,
-                    easing = androidx.compose.animation.core.FastOutSlowInEasing
-                )
-
-                // Helper to determine screen index for sliding direction
-                fun getRouteIndex(route: String?): Int {
-                    return when (route) {
-                        "home" -> 0
-                        "device" -> 1
-                        "rankings" -> 2
-                        "history" -> 3
-                        else -> -1
-                    }
-                }
-
                 val enterTransition: androidx.compose.animation.AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>.() -> androidx.compose.animation.EnterTransition = {
-                    val initialIndex = getRouteIndex(initialState.destination.route)
-                    val targetIndex = getRouteIndex(targetState.destination.route)
-                    
-                    if (initialIndex != -1 && targetIndex != -1) {
-                        // Tab to Tab
-                        if (targetIndex > initialIndex) {
-                            androidx.compose.animation.slideInHorizontally(initialOffsetX = { it }, animationSpec = commonSpec)
-                        } else {
-                            androidx.compose.animation.slideInHorizontally(initialOffsetX = { -it }, animationSpec = commonSpec)
-                        }
-                    } else {
-                        // To Detail or others
-                        androidx.compose.animation.slideInHorizontally(initialOffsetX = { it }, animationSpec = commonSpec)
-                    }
+                    androidx.compose.animation.EnterTransition.None
                 }
                 
                 val exitTransition: androidx.compose.animation.AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>.() -> androidx.compose.animation.ExitTransition = {
-                    val initialIndex = getRouteIndex(initialState.destination.route)
-                    val targetIndex = getRouteIndex(targetState.destination.route)
-                    
-                    if (initialIndex != -1 && targetIndex != -1) {
-                         // Tab to Tab
-                        if (targetIndex > initialIndex) {
-                            androidx.compose.animation.slideOutHorizontally(targetOffsetX = { -it }, animationSpec = commonSpec)
-                        } else {
-                            androidx.compose.animation.slideOutHorizontally(targetOffsetX = { it }, animationSpec = commonSpec)
-                        }
-                    } else {
-                        // From Detail or others
-                        androidx.compose.animation.slideOutHorizontally(targetOffsetX = { -it }, animationSpec = commonSpec)
-
-                    }
+                    androidx.compose.animation.ExitTransition.None
                 }
                 
                 val popEnterTransition: androidx.compose.animation.AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>.() -> androidx.compose.animation.EnterTransition = {
-                    val initialIndex = getRouteIndex(initialState.destination.route)
-                    val targetIndex = getRouteIndex(targetState.destination.route)
-                    
-                    if (initialIndex != -1 && targetIndex != -1) {
-                         // Back within Tabs (if applicable)
-                        if (targetIndex > initialIndex) {
-                             androidx.compose.animation.slideInHorizontally(initialOffsetX = { it }, animationSpec = commonSpec)
-                        } else {
-                             androidx.compose.animation.slideInHorizontally(initialOffsetX = { -it }, animationSpec = commonSpec)
-                        }
-                    } else {
-                         // Back from Detail
-                        androidx.compose.animation.slideInHorizontally(initialOffsetX = { -it }, animationSpec = commonSpec)
-                    }
+                    androidx.compose.animation.EnterTransition.None
                 }
                 
                 val popExitTransition: androidx.compose.animation.AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>.() -> androidx.compose.animation.ExitTransition = {
-                    val initialIndex = getRouteIndex(initialState.destination.route)
-                    val targetIndex = getRouteIndex(targetState.destination.route)
-                    
-                    if (initialIndex != -1 && targetIndex != -1) {
-                         // Back within Tabs
-                        if (targetIndex > initialIndex) {
-                             androidx.compose.animation.slideOutHorizontally(targetOffsetX = { -it }, animationSpec = commonSpec)
-                        } else {
-                             androidx.compose.animation.slideOutHorizontally(targetOffsetX = { it }, animationSpec = commonSpec)
-                        }
-                    } else {
-                        // Back from Detail (Detail leaving)
-                        androidx.compose.animation.slideOutHorizontally(targetOffsetX = { it }, animationSpec = commonSpec)
-                    }
+                    androidx.compose.animation.ExitTransition.None
                 }
 
                 composable(
@@ -598,36 +528,18 @@ fun MainNavigation(
                 }
             }
 
-            // Floating Navigation Bar Overlay with Elegant Animation
-            androidx.compose.animation.AnimatedVisibility(
-                visible = showBottomBar,
-                enter = androidx.compose.animation.slideInVertically(
-                    initialOffsetY = { it }, // Slide in from bottom
-                    animationSpec = androidx.compose.animation.core.tween(
-                        durationMillis = 600,
-                        easing = androidx.compose.animation.core.FastOutSlowInEasing
+            if (showBottomBar) {
+                Box(
+                    modifier = Modifier.align(Alignment.BottomCenter).zIndex(1f)
+                ) {
+                    FrostedGlassNavigationBar(
+                        items = bottomNavigationItems,
+                        navController = navController,
+                        hazeState = hazeState,
+                        modifier = Modifier
+                            .padding(bottom = innerPadding.calculateBottomPadding())
                     )
-                ) + androidx.compose.animation.fadeIn(
-                    animationSpec = androidx.compose.animation.core.tween(durationMillis = 600)
-                ),
-                exit = androidx.compose.animation.slideOutVertically(
-                    targetOffsetY = { it }, // Slide out to bottom
-                    animationSpec = androidx.compose.animation.core.tween(
-                        durationMillis = 600,
-                        easing = androidx.compose.animation.core.FastOutSlowInEasing
-                    )
-                ) + androidx.compose.animation.fadeOut(
-                    animationSpec = androidx.compose.animation.core.tween(durationMillis = 600)
-                ),
-                modifier = Modifier.align(Alignment.BottomCenter).zIndex(1f)
-            ) {
-                FrostedGlassNavigationBar(
-                    items = bottomNavigationItems,
-                    navController = navController,
-                    hazeState = hazeState,
-                    modifier = Modifier
-                        .padding(bottom = innerPadding.calculateBottomPadding())
-                )
+                }
             }
         }
     }
