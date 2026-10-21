@@ -64,6 +64,14 @@
 # Keep libsu (root)
 -keep class com.github.topjohnwu.libsu.** { *; }
 
+# Keep Shizuku and Sui
+-keep class rikka.shizuku.** { *; }
+-keep class rikka.sui.** { *; }
+-keep class moe.shizuku.** { *; }
+-dontwarn rikka.shizuku.**
+-dontwarn rikka.sui.**
+-dontwarn moe.shizuku.**
+
 
 # Keep BenchmarkResult (cpuBenchmark package) — used by Gson for history
 -keep class com.ivarna.finalbenchmark2.cpuBenchmark.BenchmarkResult { *; }
