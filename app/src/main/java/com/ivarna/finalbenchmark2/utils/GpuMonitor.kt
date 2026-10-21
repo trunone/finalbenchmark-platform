@@ -1,5 +1,6 @@
 package com.ivarna.finalbenchmark2.utils
 
+import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -14,18 +15,18 @@ object GpuMonitor {
     )
 
     private var cachedPath: String? = null
-    private val rootExecutor = RootCommandExecutor()
 
     /**
      * Finds the valid path for this specific device.
      * We cache it so we don't search every second.
      */
-    suspend fun getValidPath(): String? {
+    suspend fun getValidPath(context: Context? = null): String? {
         if (cachedPath != null) return cachedPath
 
+        val executor = RootCommandExecutor(context)
         return withContext(Dispatchers.IO) {
             for (path in POSSIBLE_PATHS) {
-                if (rootExecutor.fileExists(path)) {
+                if (executor.fileExists(path)) {
                     cachedPath = path
                     return@withContext path
                 }
@@ -37,11 +38,12 @@ object GpuMonitor {
     /**
      * Reads the current frequency using Root or Shizuku (cat command)
      */
-    suspend fun getCurrentFrequency(): String {
-        val path = getValidPath() ?: return "GPU Path Not Found"
+    suspend fun getCurrentFrequency(context: Context? = null): String {
+        val path = getValidPath(context) ?: return "GPU Path Not Found"
 
+        val executor = RootCommandExecutor(context)
         return withContext(Dispatchers.IO) {
-            val content = rootExecutor.readFile(path)
+            val content = executor.readFile(path)
             if (content != null && content.isNotBlank()) {
                 val rawFreq = content.lines().firstOrNull()?.trim() ?: ""
                 formatFrequency(rawFreq)

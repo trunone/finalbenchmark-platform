@@ -1,5 +1,6 @@
 package com.ivarna.finalbenchmark2.utils
 
+import android.content.Context
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -18,7 +19,6 @@ class GpuFrequencyReader {
         private const val TAG = "GpuFrequencyReader"
     }
     
-    private val rootExecutor = RootCommandExecutor()
     private val vendorDetector = GpuVendorDetector()
     private val cache = GpuFrequencyCache()
     
@@ -52,12 +52,12 @@ class GpuFrequencyReader {
      * Reads GPU frequency data
      * @return GpuFrequencyData or null if reading fails
      */
-    suspend fun readGpuFrequency(): GpuFrequencyState = withContext(Dispatchers.IO) {
+    suspend fun readGpuFrequency(context: Context? = null): GpuFrequencyState = withContext(Dispatchers.IO) {
+        val rootExecutor = RootCommandExecutor(context)
         try {
-            // Step 1: Check if root or Shizuku elevated access is available
-            // Use the central RootAccessManager to ensure consistency with the rest of the app
-            if (!RootAccessManager.isElevatedAccessGranted()) {
-                Log.w(TAG, "Elevated access (Root/Shizuku) not available, trying fallback methods")
+            // Step 1: Check if root or Shizuku elevated access is available and enabled
+            if (!RootAccessManager.isElevatedAccessGranted(context)) {
+                Log.w(TAG, "Elevated access (Root/Shizuku) not available or disabled, trying fallback methods")
                 
                 // Try non-root fallback methods
                 val fallbackReader = GpuFrequencyFallback()
@@ -72,7 +72,7 @@ class GpuFrequencyReader {
             }
             
             // Step 2: Try the common paths first before vendor detection
-            val commonFreq = tryCommonPaths()
+            val commonFreq = tryCommonPaths(rootExecutor)
             if (commonFreq != null) {
                 return@withContext commonFreq
             }
@@ -109,7 +109,6 @@ class GpuFrequencyReader {
                         Log.d(TAG, "Checking existence of path: $resolvedPath")
                         if (rootExecutor.fileExists(resolvedPath)) {
                             Log.d(TAG, "File exists: $resolvedPath")
-                            // Check if we have cached content for this path
                             var content = cache.getCachedFileContent(resolvedPath)
                             if (content == null) {
                                 Log.d(TAG, "Reading file content from: $resolvedPath")
@@ -128,11 +127,10 @@ class GpuFrequencyReader {
                                 val frequency = parseFrequency(content, vendor)
                                 if (frequency > 0) {
                                     Log.d(TAG, "Successfully parsed frequency: $frequency MHz from $resolvedPath")
-                                    // Successfully read current frequency, now get additional data
-                                    val maxFreq = readMaxFrequency(vendor)
-                                    val minFreq = readMinFrequency(vendor)
-                                    val availableFreqs = readAvailableFrequencies(vendor)
-                                    val governor = readGovernor(vendor)
+                                    val maxFreq = readMaxFrequency(vendor, rootExecutor)
+                                    val minFreq = readMinFrequency(vendor, rootExecutor)
+                                    val availableFreqs = readAvailableFrequencies(vendor, rootExecutor)
+                                    val governor = readGovernor(vendor, rootExecutor)
                                     
                                     val data = GpuFrequencyData(
                                         currentFrequencyMhz = frequency,
@@ -140,8 +138,8 @@ class GpuFrequencyReader {
                                         minFrequencyMhz = minFreq,
                                         availableFrequencies = availableFreqs,
                                         governor = governor,
-                                        utilizationPercent = null, // TODO: Implement utilization reading
-                                        temperatureCelsius = null, // TODO: Implement temperature reading
+                                        utilizationPercent = null,
+                                        temperatureCelsius = null,
                                         vendor = vendor,
                                         sourcePath = resolvedPath
                                     )
@@ -174,7 +172,7 @@ class GpuFrequencyReader {
     /**
      * Try common paths first for faster detection
      */
-    private suspend fun tryCommonPaths(): GpuFrequencyState? = withContext(Dispatchers.IO) {
+    private suspend fun tryCommonPaths(rootExecutor: RootCommandExecutor): GpuFrequencyState? = withContext(Dispatchers.IO) {
         val commonPaths = listOf(
             "/sys/class/kgsl/kgsl-3d0/gpuclk",             // Adreno (Standard)
             "/sys/class/kgsl/kgsl-3d0/devfreq/cur_freq",   // Adreno (Alternative)
@@ -222,8 +220,7 @@ class GpuFrequencyReader {
     /**
      * Reads maximum frequency for the current GPU vendor
      */
-    private suspend fun readMaxFrequency(vendor: GpuVendorDetector.GpuVendor): Long? {
-        // Check if we have cached max frequency
+    private suspend fun readMaxFrequency(vendor: GpuVendorDetector.GpuVendor, rootExecutor: RootCommandExecutor): Long? {
         val cachedMaxFreq = cache.getCachedMaxFreq()
         if (cachedMaxFreq != null) {
             Log.d(TAG, "Using cached max frequency: ${cachedMaxFreq} MHz")
@@ -242,7 +239,6 @@ class GpuFrequencyReader {
                 
                 for (resolvedPath in resolvedPaths) {
                     if (rootExecutor.fileExists(resolvedPath)) {
-                        // Check if we have cached content for this path
                         var content = cache.getCachedFileContent(resolvedPath)
                         if (content == null) {
                             content = rootExecutor.readFile(resolvedPath)
@@ -273,7 +269,7 @@ class GpuFrequencyReader {
     /**
      * Reads minimum frequency for the current GPU vendor
      */
-    private suspend fun readMinFrequency(vendor: GpuVendorDetector.GpuVendor): Long? {
+    private suspend fun readMinFrequency(vendor: GpuVendorDetector.GpuVendor, rootExecutor: RootCommandExecutor): Long? {
         val minFreqPaths = GpuPaths.getPathsForVendor(vendor, "min_frequency")
         
         for (path in minFreqPaths) {
@@ -308,8 +304,7 @@ class GpuFrequencyReader {
     /**
      * Reads available frequencies for the current GPU vendor
      */
-    private suspend fun readAvailableFrequencies(vendor: GpuVendorDetector.GpuVendor): List<Long>? {
-        // Check if we have cached available frequencies
+    private suspend fun readAvailableFrequencies(vendor: GpuVendorDetector.GpuVendor, rootExecutor: RootCommandExecutor): List<Long>? {
         val cachedAvailableFreqs = cache.getCachedAvailableFreqs()
         if (cachedAvailableFreqs != null) {
             Log.d(TAG, "Using cached available frequencies: ${cachedAvailableFreqs.size} entries")
@@ -328,7 +323,6 @@ class GpuFrequencyReader {
                 
                 for (resolvedPath in resolvedPaths) {
                     if (rootExecutor.fileExists(resolvedPath)) {
-                        // Check if we have cached content for this path
                         var content = cache.getCachedFileContent(resolvedPath)
                         if (content == null) {
                             content = rootExecutor.readFile(resolvedPath)
@@ -359,13 +353,12 @@ class GpuFrequencyReader {
     /**
      * Reads governor for the current GPU vendor
      */
-    private suspend fun readGovernor(vendor: GpuVendorDetector.GpuVendor): String? {
+    private suspend fun readGovernor(vendor: GpuVendorDetector.GpuVendor, rootExecutor: RootCommandExecutor): String? {
         val governorPaths = GpuPaths.getPathsForVendor(vendor, "gpu_info").filter { it.contains("governor") }
         
         for (path in governorPaths) {
             try {
                 if (rootExecutor.fileExists(path)) {
-                    // Check if we have cached content for this path
                     var content = cache.getCachedFileContent(path)
                     if (content == null) {
                         content = rootExecutor.readFile(path)
@@ -390,15 +383,11 @@ class GpuFrequencyReader {
     
     /**
      * Parses frequency from raw string content
-     * @param rawValue The raw string value from sysfs
-     * @param vendor The GPU vendor for context-specific parsing
-     * @return Frequency in MHz
      */
     fun parseFrequency(rawValue: String, vendor: GpuVendorDetector.GpuVendor): Long {
         val cleanValue = rawValue.trim()
         
         return when {
-            // Most sysfs files return Hz (very large numbers)
             cleanValue.toLongOrNull() != null -> {
                 val hz = cleanValue.toLong()
                 when {
@@ -408,7 +397,6 @@ class GpuFrequencyReader {
                 }
             }
             
-            // Some files have units in the string
             cleanValue.contains("MHz", ignoreCase = true) -> {
                 cleanValue.filter { it.isDigit() }.toLongOrNull() ?: 0
             }
@@ -424,14 +412,10 @@ class GpuFrequencyReader {
     
     /**
      * Parses available frequencies from raw string content
-     * @param rawValue The raw string value from sysfs
-     * @param vendor The GPU vendor for context-specific parsing
-     * @return List of frequencies in MHz
      */
     fun parseAvailableFrequencies(rawValue: String, vendor: GpuVendorDetector.GpuVendor): List<Long> {
         val cleanValue = rawValue.trim()
         
-        // Split by spaces or commas to get individual frequency values
         val values = cleanValue.split("\\s+".toRegex()).flatMap { it.split(",") }
         
         val frequencies = mutableListOf<Long>()

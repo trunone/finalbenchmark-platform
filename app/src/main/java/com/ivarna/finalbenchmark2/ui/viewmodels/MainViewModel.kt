@@ -1,9 +1,11 @@
 package com.ivarna.finalbenchmark2.ui.viewmodels
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ivarna.finalbenchmark2.utils.RootAccessManager
+import com.ivarna.finalbenchmark2.utils.RootAccessPreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -49,14 +51,18 @@ class MainViewModel : ViewModel() {
         checkRootAccess()
     }
 
-    fun checkRootAccess() {
+    fun checkRootAccess(context: Context? = null) {
         viewModelScope.launch(Dispatchers.IO) {
-            val hasRootAccess = RootAccessManager.isRootGranted()
-            val hasShizukuAccess = RootAccessManager.isShizukuGranted()
+            val rootGranted = RootAccessManager.isRootGranted()
+            val shizukuGranted = RootAccessManager.isShizukuGranted()
+
+            val prefs = context?.let { RootAccessPreferences(it) }
+            val useRoot = prefs?.getUseRootAccess() ?: true
+            val useShizuku = prefs?.getUseShizukuAccess() ?: true
 
             val result = when {
-                hasRootAccess -> RootStatus.ROOT_WORKING
-                hasShizukuAccess -> RootStatus.SHIZUKU_WORKING
+                useRoot && rootGranted -> RootStatus.ROOT_WORKING
+                useShizuku && shizukuGranted -> RootStatus.SHIZUKU_WORKING
                 else -> RootStatus.NO_ROOT
             }
 

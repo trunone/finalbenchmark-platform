@@ -37,14 +37,19 @@ object RootAccessManager {
     }
 
     /**
-     * Returns Shizuku permission status. Performs a fast live check.
+     * Returns Shizuku permission status. Performs a fast live check safely.
      */
     suspend fun isShizukuGranted(): Boolean {
-        val result = withContext(Dispatchers.IO) {
-            ShizukuUtils.hasShizukuPermission()
+        return try {
+            val result = withContext(Dispatchers.IO) {
+                ShizukuUtils.hasShizukuPermission()
+            }
+            cachedShizukuState = result
+            result
+        } catch (e: Throwable) {
+            cachedShizukuState = false
+            false
         }
-        cachedShizukuState = result
-        return result
     }
 
     /**
@@ -94,16 +99,25 @@ object RootAccessManager {
     }
 
     fun getCachedShizukuAccess(): Boolean {
-        val live = ShizukuUtils.hasShizukuPermission()
-        cachedShizukuState = live
-        return live
+        return try {
+            val live = ShizukuUtils.hasShizukuPermission()
+            cachedShizukuState = live
+            live
+        } catch (e: Throwable) {
+            cachedShizukuState = false
+            false
+        }
     }
 
     fun getCachedElevatedAccess(): Boolean? {
-        val s = ShizukuUtils.hasShizukuPermission()
-        if (s) return true
-        val r = cachedRootState
-        return r
+        return try {
+            val s = ShizukuUtils.hasShizukuPermission()
+            if (s) return true
+            val r = cachedRootState
+            r
+        } catch (e: Throwable) {
+            cachedRootState
+        }
     }
 
     suspend fun hasRootAccess(context: Context? = null): Boolean {

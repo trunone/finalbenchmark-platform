@@ -47,9 +47,11 @@ fun RootCheckScreen(
 
     val hasRootChecked = remember { mutableStateOf(false) }
 
-    fun performAccessCheck() {
+    fun performAccessCheck(showCheckingIndicator: Boolean = true) {
         scope.launch {
-            rootUiState = RootUiState.Checking
+            if (showCheckingIndicator) {
+                rootUiState = RootUiState.Checking
+            }
             val hasShizuku = RootAccessManager.isShizukuGranted()
             val isShizukuAvailable = ShizukuUtils.isShizukuAvailable()
             if (hasShizuku) {
@@ -79,7 +81,7 @@ fun RootCheckScreen(
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                performAccessCheck()
+                performAccessCheck(showCheckingIndicator = false)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)

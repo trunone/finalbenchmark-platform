@@ -1028,7 +1028,7 @@ class MainActivity : ComponentActivity() {
     /**
      * Try to set governor using root access
      */
-    private fun trySetGovernorWithRoot(): Boolean {
+    private suspend fun trySetGovernorWithRoot(): Boolean {
         return try {
             val numCores = Runtime.getRuntime().availableProcessors()
             val command = StringBuilder()
@@ -1038,9 +1038,7 @@ class MainActivity : ComponentActivity() {
             }
             
             val rootExecutor = RootCommandExecutor(this)
-            val result = runBlocking {
-                rootExecutor.executeCommand(command.toString())
-            }
+            val result = rootExecutor.executeCommand(command.toString())
             
             if (result != null) {
                 Log.i(TAG, "Governor command executed successfully")
