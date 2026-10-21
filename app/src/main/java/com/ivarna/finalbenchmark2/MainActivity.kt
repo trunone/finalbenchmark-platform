@@ -22,6 +22,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -181,10 +182,11 @@ class MainActivity : ComponentActivity() {
                     val hazeState = remember { HazeState() }
                     Scaffold(
                         modifier = Modifier.fillMaxSize(),
+                        contentWindowInsets = WindowInsets(0, 0, 0, 0),
                         topBar = {} // Empty top bar to remove any system app bar
-                    ) { innerPadding ->
+                    ) { _ ->
                         MainNavigation(
-                            modifier = Modifier.padding(innerPadding),
+                            modifier = Modifier.fillMaxSize(),
                             hazeState = hazeState,
                             rootStatus = rootStatus
                         )
