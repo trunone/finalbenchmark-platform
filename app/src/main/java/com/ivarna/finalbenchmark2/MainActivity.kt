@@ -129,20 +129,6 @@ class MainActivity : ComponentActivity() {
         // NEW: Request notification permission (Android 13+)
         requestNotificationPermission()
         
-        // Use WindowInsetsController to hide system bars for full-screen immersive mode
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-            window.insetsController?.let {
-                it.hide(android.view.WindowInsets.Type.statusBars() or android.view.WindowInsets.Type.navigationBars())
-                it.systemBarsBehavior = android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            }
-        } else {
-            @Suppress("DEPRECATION")
-            window.decorView.systemUiVisibility = (
-                android.view.View.SYSTEM_UI_FLAG_FULLSCREEN
-                    or android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                    or android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-            )
-        }
         
         val themePreferences = ThemePreferences(this)
         val themeMode = themePreferences.getThemeMode()
