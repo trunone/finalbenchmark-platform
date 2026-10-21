@@ -12,15 +12,6 @@ import kotlinx.coroutines.withContext
 class RootCommandExecutor(private val context: Context? = null) {
     companion object {
         private const val TAG = "RootCommandExecutor"
-
-        init {
-            Shell.enableVerboseLogging = false
-            Shell.setDefaultBuilder(
-                Shell.Builder.create()
-                    .setFlags(Shell.FLAG_REDIRECT_STDERR)
-                    .setTimeout(10)
-            )
-        }
     }
 
     /**
