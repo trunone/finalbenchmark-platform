@@ -18,6 +18,7 @@ import com.ivarna.finalbenchmark2.utils.OpenCLBenchmarkBridge
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -46,6 +47,8 @@ data class GpuBenchmarkUiState(
     val isWarmingUp: Boolean = false,
     val isRunning: Boolean = false,
     val isCompleted: Boolean = false,
+    val isStressMode: Boolean = false,
+    val stressLoopCount: Int = 0,
 
     val currentScene: GpuScene = GpuScene.TRIANGLE_RENDERING,
     val currentTestIndex: Int = 0,
@@ -281,10 +284,10 @@ class GpuBenchmarkViewModel(
         _uiState.update { it.copy(gpuName = cleanName, glApiLabel = "OpenGL ES $esVersion") }
     }
 
-    fun start(preset: String) {
+    fun start(preset: String, isStressMode: Boolean = false) {
         runJob?.cancel()
-        _uiState.update { it.copy(presetName = preset) }
-        runJob = viewModelScope.launch { runBenchmark() }
+        _uiState.update { it.copy(presetName = preset, isStressMode = isStressMode, stressLoopCount = 0) }
+        runJob = viewModelScope.launch { runBenchmark(preset, isStressMode) }
     }
 
     fun stop() {
@@ -301,7 +304,7 @@ class GpuBenchmarkViewModel(
         totalRenderTimeMs.add(frametime.toDouble())
     }
 
-    private suspend fun runBenchmark() {
+    private suspend fun runBenchmark(preset: String, isStressMode: Boolean) {
         val results = mutableListOf<GpuTestResult>()
         performanceMonitor.start()
 
@@ -311,17 +314,23 @@ class GpuBenchmarkViewModel(
         if (vulkanOk) android.util.Log.i("GpuBenchmarkVM", "Vulkan ready: ${VulkanBenchmarkBridge.getGpuName()}")
         if (openclOk) android.util.Log.i("GpuBenchmarkVM", "OpenCL ready")
 
-        for ((index, scene) in GPU_SCENES.withIndex()) {
-            _uiState.update {
-                it.copy(
-                    isWarmingUp = true, isRunning = false,
-                    currentScene = scene, currentTestIndex = index,
-                    currentTestName = scene.displayName(),
-                    currentTestProgress = 0f,
-                    overallProgress = index.toFloat() / GPU_SCENES.size,
-                    currentApiLabel = scene.apiLabel(it.glApiLabel)
-                )
-            }
+        var stressLoopCount = 1
+
+        do {
+            results.clear()
+            _uiState.update { it.copy(stressLoopCount = stressLoopCount) }
+
+            for ((index, scene) in GPU_SCENES.withIndex()) {
+                _uiState.update {
+                    it.copy(
+                        isWarmingUp = true, isRunning = true,
+                        currentScene = scene, currentTestIndex = index,
+                        currentTestName = if (isStressMode) "Stress Loop #$stressLoopCount - ${scene.displayName()}" else scene.displayName(),
+                        currentTestProgress = 0f,
+                        overallProgress = index.toFloat() / GPU_SCENES.size,
+                        currentApiLabel = scene.apiLabel(it.glApiLabel)
+                    )
+                }
 
             // ── Vulkan / OpenCL compute scenes (run via native bridge, not GL) ──
             if (scene.isComputeScene()) {
@@ -426,6 +435,14 @@ class GpuBenchmarkViewModel(
             val score  = ((avgFps.toDouble() / refFps) * 100.0).roundToInt().coerceAtLeast(0)
             results += GpuTestResult(scene, scene.displayName(), scene.apiLabel(_uiState.value.glApiLabel), avgFps, avgFt, score)
         }
+
+            if (isStressMode && kotlinx.coroutines.currentCoroutineContext().isActive) {
+                stressLoopCount++
+                delay(500)
+            } else {
+                break
+            }
+        } while (isStressMode && kotlinx.coroutines.currentCoroutineContext().isActive)
 
         VulkanBenchmarkBridge.destroy()
         OpenCLBenchmarkBridge.destroy()

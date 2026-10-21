@@ -345,6 +345,7 @@ fun MainNavigation(
                         }
                         GpuBenchmarkScreen(
                             preset = preset,
+                            isStressMode = isStress,
                             historyRepository = gpuHistoryRepository,
                             onBenchmarkComplete = { summaryJson ->
                                 val encodedJson = java.net.URLEncoder.encode(summaryJson, "UTF-8")
