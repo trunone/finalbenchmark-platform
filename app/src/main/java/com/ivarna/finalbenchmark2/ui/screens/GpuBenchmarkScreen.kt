@@ -112,6 +112,7 @@ private val GPU_TEST_TINT = mapOf(
 @Composable
 fun GpuBenchmarkScreen(
     preset: String,
+    isStressMode: Boolean = false,
     historyRepository: HistoryRepository? = null,
     onBenchmarkComplete: (String) -> Unit,
     onNavBack: () -> Unit,
@@ -155,8 +156,8 @@ fun GpuBenchmarkScreen(
     }
 
     // Start benchmark on first composition
-    LaunchedEffect(preset) {
-        viewModel.start(preset)
+    LaunchedEffect(preset, isStressMode) {
+        viewModel.start(preset, isStressMode)
     }
 
     BackHandler {
@@ -455,7 +456,7 @@ private fun GpuRightPanel(
                 val badgeText = when {
                     uiState.isWarmingUp -> "WARMING UP"
                     uiState.isCompleted -> "COMPLETE"
-                    uiState.isRunning   -> "RUNNING"
+                    uiState.isRunning   -> if (uiState.isStressMode) "STRESS #${uiState.stressLoopCount}" else "RUNNING"
                     else                -> "READY"
                 }
                 

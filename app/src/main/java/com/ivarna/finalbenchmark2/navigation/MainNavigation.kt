@@ -118,8 +118,9 @@ fun MainNavigation(
 
     Scaffold(
             modifier = modifier,
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
             bottomBar = {} // Empty bottomBar to prevent reservation of space
-    ) { innerPadding ->
+    ) { _ ->
         Box(
                 modifier =
                         Modifier.fillMaxSize()
@@ -128,7 +129,7 @@ fun MainNavigation(
                     navController = navController,
                     startDestination = startDestination,
                     modifier = Modifier
-                        .padding(innerPadding)
+                        .fillMaxSize()
                         .haze(state = hazeState)
             ) {
                 composable("welcome") {
@@ -345,6 +346,7 @@ fun MainNavigation(
                         }
                         GpuBenchmarkScreen(
                             preset = preset,
+                            isStressMode = isStress,
                             historyRepository = gpuHistoryRepository,
                             onBenchmarkComplete = { summaryJson ->
                                 val encodedJson = java.net.URLEncoder.encode(summaryJson, "UTF-8")
@@ -530,14 +532,15 @@ fun MainNavigation(
 
             if (showBottomBar) {
                 Box(
-                    modifier = Modifier.align(Alignment.BottomCenter).zIndex(1f)
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                        .zIndex(1f)
                 ) {
                     FrostedGlassNavigationBar(
                         items = bottomNavigationItems,
                         navController = navController,
-                        hazeState = hazeState,
-                        modifier = Modifier
-                            .padding(bottom = innerPadding.calculateBottomPadding())
+                        hazeState = hazeState
                     )
                 }
             }
