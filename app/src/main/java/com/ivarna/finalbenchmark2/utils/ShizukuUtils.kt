@@ -15,20 +15,25 @@ object ShizukuUtils {
     const val SHIZUKU_PERMISSION_REQUEST_CODE = 8888
 
     private var newProcessMethod: Method? = null
+    private var reflectionAttempted = false
 
-    init {
-        try {
-            newProcessMethod = Shizuku::class.java.getDeclaredMethod(
-                "newProcess",
-                Array<String>::class.java,
-                Array<String>::class.java,
-                String::class.java
-            ).apply {
-                isAccessible = true
+    private fun getNewProcessMethod(): Method? {
+        if (!reflectionAttempted) {
+            reflectionAttempted = true
+            try {
+                newProcessMethod = Shizuku::class.java.getDeclaredMethod(
+                    "newProcess",
+                    Array<String>::class.java,
+                    Array<String>::class.java,
+                    String::class.java
+                ).apply {
+                    isAccessible = true
+                }
+            } catch (e: Throwable) {
+                Log.e(TAG, "Failed to reflect Shizuku.newProcess method", e)
             }
-        } catch (e: Throwable) {
-            Log.e(TAG, "Failed to reflect Shizuku.newProcess method", e)
         }
+        return newProcessMethod
     }
 
     /**
@@ -78,7 +83,9 @@ object ShizukuUtils {
 
     fun addPermissionListener(listener: Shizuku.OnRequestPermissionResultListener) {
         try {
-            Shizuku.addRequestPermissionResultListener(listener)
+            if (isShizukuAvailable()) {
+                Shizuku.addRequestPermissionResultListener(listener)
+            }
         } catch (e: Throwable) {
             Log.e(TAG, "Error adding permission listener", e)
         }
@@ -86,7 +93,9 @@ object ShizukuUtils {
 
     fun removePermissionListener(listener: Shizuku.OnRequestPermissionResultListener) {
         try {
-            Shizuku.removeRequestPermissionResultListener(listener)
+            if (isShizukuAvailable()) {
+                Shizuku.removeRequestPermissionResultListener(listener)
+            }
         } catch (e: Throwable) {
             Log.e(TAG, "Error removing permission listener", e)
         }
@@ -102,7 +111,9 @@ object ShizukuUtils {
 
     fun removeBinderReceivedListener(listener: Shizuku.OnBinderReceivedListener) {
         try {
-            Shizuku.removeBinderReceivedListener(listener)
+            if (isShizukuAvailable()) {
+                Shizuku.removeBinderReceivedListener(listener)
+            }
         } catch (e: Throwable) {
             Log.e(TAG, "Error removing binder received listener", e)
         }
@@ -110,7 +121,9 @@ object ShizukuUtils {
 
     fun addBinderDeadListener(listener: Shizuku.OnBinderDeadListener) {
         try {
-            Shizuku.addBinderDeadListener(listener)
+            if (isShizukuAvailable()) {
+                Shizuku.addBinderDeadListener(listener)
+            }
         } catch (e: Throwable) {
             Log.e(TAG, "Error adding binder dead listener", e)
         }
@@ -118,7 +131,9 @@ object ShizukuUtils {
 
     fun removeBinderDeadListener(listener: Shizuku.OnBinderDeadListener) {
         try {
-            Shizuku.removeBinderDeadListener(listener)
+            if (isShizukuAvailable()) {
+                Shizuku.removeBinderDeadListener(listener)
+            }
         } catch (e: Throwable) {
             Log.e(TAG, "Error removing binder dead listener", e)
         }
@@ -138,14 +153,10 @@ object ShizukuUtils {
         var process: Process? = null
         try {
             Log.d(TAG, "Executing Shizuku command: $command")
-            val method = newProcessMethod ?: Shizuku::class.java.getDeclaredMethod(
-                "newProcess",
-                Array<String>::class.java,
-                Array<String>::class.java,
-                String::class.java
-            ).apply {
-                isAccessible = true
-                newProcessMethod = this
+            val method = getNewProcessMethod()
+            if (method == null) {
+                Log.e(TAG, "newProcessMethod reflection is null")
+                return@withContext null
             }
 
             process = method.invoke(
@@ -178,7 +189,7 @@ object ShizukuUtils {
         } finally {
             try {
                 process?.destroy()
-            } catch (_: Exception) {
+            } catch (_: Throwable) {
             }
         }
     }
