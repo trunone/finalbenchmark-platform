@@ -76,24 +76,24 @@ class GpuFrequencyReader {
             if (activePath != null) {
                 val content = rootExecutor.readFile(activePath)
                 if (content != null) {
-                    val freq = parseFrequency(content, cachedVendor ?: GpuVendorDetector.GpuVendor.UNKNOWN)
-                    if (freq > 0) {
-                        val vendor = cachedVendor ?: GpuVendorDetector.GpuVendor.UNKNOWN
-                        val data = GpuFrequencyData(
-                            currentFrequencyMhz = freq,
-                            maxFrequencyMhz = cachedMaxFreq ?: readMaxFrequency(vendor, rootExecutor),
-                            minFrequencyMhz = cachedMinFreq ?: readMinFrequency(vendor, rootExecutor),
-                            availableFrequencies = cachedAvailableFreqs ?: readAvailableFrequencies(vendor, rootExecutor),
-                            governor = cachedGovernor ?: readGovernor(vendor, rootExecutor),
-                            utilizationPercent = null,
-                            temperatureCelsius = null,
-                            vendor = vendor,
-                            sourcePath = activePath
-                        )
-                        return@withContext GpuFrequencyState.Available(data)
-                    }
+                    val vendor = cachedVendor ?: GpuVendorDetector.GpuVendor.UNKNOWN
+                    val parsed = parseFrequency(content, vendor)
+                    val freq = if (parsed == 0L && cachedMinFreq != null) cachedMinFreq!! else parsed
+
+                    val data = GpuFrequencyData(
+                        currentFrequencyMhz = freq,
+                        maxFrequencyMhz = cachedMaxFreq ?: readMaxFrequency(vendor, rootExecutor),
+                        minFrequencyMhz = cachedMinFreq ?: readMinFrequency(vendor, rootExecutor),
+                        availableFrequencies = cachedAvailableFreqs ?: readAvailableFrequencies(vendor, rootExecutor),
+                        governor = cachedGovernor ?: readGovernor(vendor, rootExecutor),
+                        utilizationPercent = null,
+                        temperatureCelsius = null,
+                        vendor = vendor,
+                        sourcePath = activePath
+                    )
+                    return@withContext GpuFrequencyState.Available(data)
                 }
-                // Known path failed, invalidate and rediscover
+                // Known path failed to read (file removed/unreadable), invalidate
                 cachedCurrentPath = null
             }
             
@@ -127,29 +127,29 @@ class GpuFrequencyReader {
                         if (rootExecutor.fileExists(resolvedPath)) {
                             val content = rootExecutor.readFile(resolvedPath)
                             if (content != null) {
-                                val frequency = parseFrequency(content, vendor)
-                                if (frequency > 0) {
-                                    cachedCurrentPath = resolvedPath
+                                cachedCurrentPath = resolvedPath
 
-                                    val maxFreq = readMaxFrequency(vendor, rootExecutor)
-                                    val minFreq = readMinFrequency(vendor, rootExecutor)
-                                    val availableFreqs = readAvailableFrequencies(vendor, rootExecutor)
-                                    val governor = readGovernor(vendor, rootExecutor)
-                                    
-                                    val data = GpuFrequencyData(
-                                        currentFrequencyMhz = frequency,
-                                        maxFrequencyMhz = maxFreq,
-                                        minFrequencyMhz = minFreq,
-                                        availableFrequencies = availableFreqs,
-                                        governor = governor,
-                                        utilizationPercent = null,
-                                        temperatureCelsius = null,
-                                        vendor = vendor,
-                                        sourcePath = resolvedPath
-                                    )
-                                    
-                                    return@withContext GpuFrequencyState.Available(data)
-                                }
+                                val parsed = parseFrequency(content, vendor)
+                                val maxFreq = readMaxFrequency(vendor, rootExecutor)
+                                val minFreq = readMinFrequency(vendor, rootExecutor)
+                                val availableFreqs = readAvailableFrequencies(vendor, rootExecutor)
+                                val governor = readGovernor(vendor, rootExecutor)
+
+                                val freq = if (parsed == 0L && minFreq != null) minFreq else parsed
+
+                                val data = GpuFrequencyData(
+                                    currentFrequencyMhz = freq,
+                                    maxFrequencyMhz = maxFreq,
+                                    minFrequencyMhz = minFreq,
+                                    availableFrequencies = availableFreqs,
+                                    governor = governor,
+                                    utilizationPercent = null,
+                                    temperatureCelsius = null,
+                                    vendor = vendor,
+                                    sourcePath = resolvedPath
+                                )
+
+                                return@withContext GpuFrequencyState.Available(data)
                             }
                         }
                     }
