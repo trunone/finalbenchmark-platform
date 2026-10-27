@@ -373,17 +373,6 @@ fun StorageBenchmarkScreen(
                             letterSpacing = (-2).sp
                         )
                         
-                        val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-                        val pulseAlpha by infiniteTransition.animateFloat(
-                            initialValue = 0.4f,
-                            targetValue = 1f,
-                            animationSpec = infiniteRepeatable(
-                                animation = tween(800),
-                                repeatMode = RepeatMode.Reverse
-                            ),
-                            label = "alpha"
-                        )
-
                         Text(
                             text = when {
                                 state.isWarmingUp -> "WARMING UP"
@@ -392,7 +381,7 @@ fun StorageBenchmarkScreen(
                             },
                             style = MaterialTheme.typography.labelMedium,
                             color = if (state.isWarmingUp) 
-                                        Color.Yellow.copy(alpha = pulseAlpha)
+                                        Color.Yellow
                                     else 
                                         tint,
                             letterSpacing = 2.sp,
@@ -494,36 +483,9 @@ fun StorageBenchmarkScreen(
 
 @Composable
 private fun StorReactorProgress(progress: Float, accentColor: Color) {
-    val infiniteTransition = rememberInfiniteTransition(label = "reactor")
-    val rotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(4000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "rotation"
-    )
-
-    // Animated glow pulsator for the shiny progress tip
-    val glowAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.4f,
-        targetValue = 1.0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(800, easing = EaseInOutCubic),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "glow_alpha"
-    )
-    val glowRadius by infiniteTransition.animateFloat(
-        initialValue = 12f,
-        targetValue = 24f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(800, easing = EaseInOutCubic),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "glow_radius"
-    )
+    val rotation = 0f
+    val glowAlpha = 1.0f
+    val glowRadius = 18f
 
     Canvas(modifier = Modifier.size(240.dp)) {
         val center = Offset(size.width / 2, size.height / 2)
@@ -705,16 +667,7 @@ private fun StorTimelineTestRow(
 
 @Composable
 private fun StorRunningBenchmarkIndicator(tint: Color) {
-    val infiniteTransition = rememberInfiniteTransition(label = "spinner")
-    val rotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "rotation"
-    )
+    val rotation = 0f
 
     Canvas(modifier = Modifier.size(20.dp)) {
         rotate(rotation) {

@@ -512,22 +512,10 @@ fun HomeScreen(
                                             contentAlignment = Alignment.Center
                                         ) {
                                             // Content Overlay
-                                            val infiniteTransition = rememberInfiniteTransition(label = "button_spin")
-                                            val angle by infiniteTransition.animateFloat(
-                                                initialValue = 0f,
-                                                targetValue = 360f,
-                                                animationSpec = infiniteRepeatable(
-                                                    animation = tween(durationMillis = 4000, easing = LinearEasing),
-                                                    repeatMode = RepeatMode.Restart
-                                                ),
-                                                label = "spin_angle"
-                                            )
-                                            
                                             val primary = MaterialTheme.colorScheme.primary
                                             val tertiary = MaterialTheme.colorScheme.tertiary
                                             
-                                            // Rotating Background
-                                            // Rotating Background - Doc Implementation
+                                            // Static Background
                                             Spacer(
                                                 modifier = Modifier
                                                     .fillMaxSize()
@@ -541,13 +529,10 @@ fun HomeScreen(
                                                         )
                                                         onDrawBehind {
                                                             val radius = size.maxDimension
-                                                            // pivot defaults to center
-                                                            rotate(degrees = angle) {
-                                                                drawCircle(
-                                                                    brush = brush,
-                                                                    radius = radius
-                                                                )
-                                                            }
+                                                            drawCircle(
+                                                                brush = brush,
+                                                                radius = radius
+                                                            )
                                                         }
                                                     }
                                             )
@@ -1343,76 +1328,55 @@ fun TipRow(number: String, title: String, description: String) {
         }
 }
 
-// Track if ROM warning animation has been shown (persists across navigations)
-private var romWarningAnimationShown = false
-
 // ROM Compatibility Warning Card (Alert Style)
 @Composable
 fun RomCompatibilityWarningCard() {
-        var isVisible by remember { mutableStateOf(romWarningAnimationShown) }
-
-        LaunchedEffect(Unit) {
-                if (!romWarningAnimationShown) {
-                        delay(300)
-                        isVisible = true
-                        romWarningAnimationShown = true
-                } else {
-                        isVisible = true
-                }
-        }
-
-        AnimatedVisibility(
-                visible = isVisible,
-                enter = fadeIn(animationSpec = tween(600)) + expandVertically(),
-                exit = fadeOut() + shrinkVertically()
+        // Redesigned as a "Warning Strip" rather than a full heavy card
+        Card(
+                modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.1f) // Light red tint
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.2f)),
+                elevation = CardDefaults.cardElevation(0.dp)
         ) {
-                // Redesigned as a "Warning Strip" rather than a full heavy card
-                Card(
+                Row(
                         modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 4.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.1f) // Light red tint
-                        ),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.2f)),
-                        elevation = CardDefaults.cardElevation(0.dp)
+                                .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Start
                 ) {
-                        Row(
-                                modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Start
+                        // Warning Icon
+                        Icon(
+                                imageVector = Icons.Rounded.Warning,
+                                contentDescription = "Warning",
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(24.dp)
+                        )
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        // Warning Text
+                        Column(
+                                modifier = Modifier.weight(1f)
                         ) {
-                                // Warning Icon
-                                Icon(
-                                        imageVector = Icons.Rounded.Warning,
-                                        contentDescription = "Warning",
-                                        tint = MaterialTheme.colorScheme.error,
-                                        modifier = Modifier.size(24.dp)
+                                Text(
+                                        text = "ROM Compatibility Note",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.error
                                 )
-
-                                Spacer(modifier = Modifier.width(12.dp))
-
-                                // Warning Text
-                                Column(
-                                        modifier = Modifier.weight(1f)
-                                ) {
-                                        Text(
-                                                text = "ROM Compatibility Note",
-                                                style = MaterialTheme.typography.labelMedium,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.error
-                                        )
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Text(
-                                                text = "Known issues with OxygenOS, RealmeUI, ColorOS. Best performance on AOSP/HyperOS.",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                                                lineHeight = 14.sp
-                                        )
-                                }
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                        text = "Known issues with OxygenOS, RealmeUI, ColorOS. Best performance on AOSP/HyperOS.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                        lineHeight = 14.sp
+                                )
                         }
                 }
         }
@@ -1701,19 +1665,6 @@ fun SmallStatCard(
     color: Color,
     onClick: () -> Unit
 ) {
-    // Icon Pop Animation
-    val iconScale = remember { androidx.compose.animation.core.Animatable(0.5f) }
-    LaunchedEffect(Unit) {
-        delay(100) // Slight delay for pop effect
-        iconScale.animateTo(
-            targetValue = 1f,
-            animationSpec = androidx.compose.animation.core.spring(
-                dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
-                stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
-            )
-        )
-    }
-
     // Use Box/Column directly instead of nested Card to avoid double-backgrounds
     // The visual container is provided by the parent AnimatedGlassCard
     Column(
@@ -1737,7 +1688,6 @@ fun SmallStatCard(
         Box(
             modifier = Modifier
                 .size(40.dp) // Slightly larger touch/visual target
-                .scale(iconScale.value)
                 .clip(CircleShape)
                 .background(color.copy(alpha = 0.15f)) // Glassy icon bg
                 .border(1.dp, color.copy(alpha = 0.1f), CircleShape),
