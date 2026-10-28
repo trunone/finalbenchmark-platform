@@ -285,18 +285,6 @@ fun BenchmarkScreen(
                                 letterSpacing = (-2).sp
                             )
                             
-                            // Pulsing animation for Warm-up
-                            val infiniteTransition = rememberInfiniteTransition(label = "warmup_pulse")
-                            val pulseAlpha by infiniteTransition.animateFloat(
-                                initialValue = 0.4f,
-                                targetValue = 1f,
-                                animationSpec = infiniteRepeatable(
-                                    animation = tween(800),
-                                    repeatMode = RepeatMode.Reverse
-                                ),
-                                label = "alpha"
-                            )
-
                             // 2. Status Text
                             Text(
                                 text = when {
@@ -306,7 +294,7 @@ fun BenchmarkScreen(
                                 },
                                 style = MaterialTheme.typography.labelMedium,
                                 color = if (isWarmingUp) 
-                                            MaterialTheme.colorScheme.tertiary.copy(alpha = pulseAlpha)
+                                            MaterialTheme.colorScheme.tertiary
                                         else 
                                             MaterialTheme.colorScheme.primary,
                                 letterSpacing = 2.sp,
@@ -381,36 +369,9 @@ fun BenchmarkScreen(
 
 @Composable
 fun ReactorProgress(progress: Float) {
-    val infiniteTransition = rememberInfiniteTransition(label = "reactor")
-    val rotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(4000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "rotation"
-    )
-
-    // Animated glow pulsator for the shiny progress tip
-    val glowAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.4f,
-        targetValue = 1.0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(800, easing = EaseInOutCubic),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "glow_alpha"
-    )
-    val glowRadius by infiniteTransition.animateFloat(
-        initialValue = 16f,
-        targetValue = 28f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(800, easing = EaseInOutCubic),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "glow_radius"
-    )
+    val rotation = 0f
+    val glowAlpha = 1.0f
+    val glowRadius = 20f
 
     val primaryColor = MaterialTheme.colorScheme.primary
     val secondaryColor = MaterialTheme.colorScheme.secondary
@@ -640,17 +601,7 @@ fun TimelineTestRow(test: TestState) {
 
 @Composable
 fun RunningBenchmarkIndicator() {
-    val infiniteTransition = rememberInfiniteTransition(label = "spinner")
-    val rotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "rotation"
-    )
-
+    val rotation = 0f
     val primaryColor = MaterialTheme.colorScheme.primary
 
     Canvas(modifier = Modifier.size(20.dp)) {

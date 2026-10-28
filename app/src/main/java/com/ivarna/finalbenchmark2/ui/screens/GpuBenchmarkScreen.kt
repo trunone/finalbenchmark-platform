@@ -467,16 +467,7 @@ private fun GpuRightPanel(
                     else                -> Color.Gray
                 }
 
-                val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-                val badgeAlpha by infiniteTransition.animateFloat(
-                    initialValue = 0.5f,
-                    targetValue = 1f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(800),
-                        repeatMode = RepeatMode.Reverse
-                    ),
-                    label = "alpha"
-                )
+                val badgeAlpha = 1f
 
                 Box(
                     modifier = Modifier

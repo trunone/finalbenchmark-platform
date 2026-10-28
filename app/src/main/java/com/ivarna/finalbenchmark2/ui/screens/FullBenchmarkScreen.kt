@@ -393,16 +393,7 @@ private fun FullBenchmarkProgressOverlay(
                         ),
                     contentAlignment = Alignment.CenterEnd
                 ) {
-                    val infiniteTransition = rememberInfiniteTransition(label = "bar_shiny")
-                    val shinyGlow by infiniteTransition.animateFloat(
-                        initialValue = 0.3f,
-                        targetValue = 1.0f,
-                        animationSpec = infiniteRepeatable(
-                            animation = tween(850, easing = LinearEasing),
-                            repeatMode = RepeatMode.Reverse
-                        ),
-                        label = "glow"
-                    )
+                    val shinyGlow = 1.0f
 
                     Box(
                         modifier = Modifier
@@ -537,16 +528,7 @@ private fun FullBenchmarkProgressOverlay(
                         ),
                     contentAlignment = Alignment.CenterEnd
                 ) {
-                    val infiniteTransition = rememberInfiniteTransition(label = "bar_shiny_portrait")
-                    val shinyGlow by infiniteTransition.animateFloat(
-                        initialValue = 0.3f,
-                        targetValue = 1.0f,
-                        animationSpec = infiniteRepeatable(
-                            animation = tween(850, easing = LinearEasing),
-                            repeatMode = RepeatMode.Reverse
-                        ),
-                        label = "glow"
-                    )
+                    val shinyGlow = 1.0f
 
                     Box(
                         modifier = Modifier
@@ -577,38 +559,9 @@ private fun PhasePill(
     modifier: Modifier = Modifier,
     isDarkCard: Boolean = false
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse_pill")
-    val pulseGlow by infiniteTransition.animateFloat(
-        initialValue = 0.5f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = EaseInOutCubic),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulse"
-    )
-
-    // Breathing scale animation for the active/running pill's content
-    val textScale by infiniteTransition.animateFloat(
-        initialValue = 0.90f,
-        targetValue = 1.06f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(750, easing = EaseInOutCubic),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "text_scale"
-    )
-
-    // Moving sweeping shimmer position for the active/running gradient
-    val shimmerOffset by infiniteTransition.animateFloat(
-        initialValue = -100f,
-        targetValue = 260f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1400, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "shimmer_offset"
-    )
+    val pulseGlow = 1f
+    val textScale = 1f
+    val shimmerOffset = 0f
 
     val abbrev = when (phase.category) {
         BenchmarkCategory.CPU          -> "CPU"
